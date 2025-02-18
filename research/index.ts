@@ -93,6 +93,19 @@ function getFilingUrl(
     cik
   )}/${cleanAccession}/${wantXML ? "primary_doc.xml" : primaryDoc}`;
 }
+
+function getFilingUrlIndexHtml(
+  cik: string,
+  accessionNumber: string,
+  primaryDoc: string,
+  wantXML: boolean = false
+) {
+  const cleanAccession = accessionNumber.replace(/-/g, "");
+  return `https://www.sec.gov/Archives/edgar/data/${unpadCIK(
+    cik
+  )}/${cleanAccession}/${accessionNumber}-index.html`;
+}
+
 async function fetchDetails(cik: string): Promise<SECFiling> {
   const response = await fetch(`${SUBMISSION_URL}/${cik}.json`, {
     headers: {
@@ -121,47 +134,84 @@ async function fetchFiling(url: string) {
   return response.text();
 }
 
+async function get13FXmlUrl(indexUrl: string) {
+  const response = await fetch(indexUrl, {
+    headers: { "User-Agent": "Your Company Name yourname@example.com" },
+  });
+  if (!response.ok)
+    throw new Error(`Failed to fetch index: ${response.status}`);
+  const html = await response.text();
+  const matches = [...html.matchAll(/href="([^"]+\.xml)"/gi)];
+  const xmlFiles = matches
+    .map((m) => m[1])
+    .filter((f) => !f.includes("primary_doc"));
+  if (!xmlFiles.length) throw new Error("No valid 13F XML found");
+  return new URL(xmlFiles[0], indexUrl).href;
+}
+
 const SUBMISSION_URL = "https://data.sec.gov/submissions";
 
 // TESTING
-const details = await fetchDetails("CIK0001844452");
+const CIK = padCIK(1037389);
+const details = await fetchDetails(CIK);
 
-const latest = {
-  form: details.filings.recent.form[0],
-  date: details.filings.recent.filingDate[0],
-  accessionNumber: details.filings.recent.accessionNumber[0],
-  primaryDoc: details.filings.recent.primaryDocument[0],
-  primaryDocDescription: details.filings.recent.primaryDocDescription[0],
-};
+const { form, filingDate, accessionNumber, primaryDocument } =
+  details.filings.recent;
 
-const url = getFilingUrl(
-  "CIK0001844452",
+// Use raw for loop, insanely fast for large datasets ~200ms
+const filings = [];
+for (let i = 0; i < form.length; i++) {
+  filings.push({
+    form: form[i],
+    date: filingDate[i],
+    accessionNumber: accessionNumber[i],
+    primaryDoc: primaryDocument[i],
+  });
+}
+
+const filings13F = filings.filter((f) => f.form.startsWith("13"));
+
+const latest = filings13F[0];
+
+const url_xml_false = getFilingUrl(
+  CIK,
   latest.accessionNumber,
   latest.primaryDoc,
   false
 );
 
 const url_xml_true = getFilingUrl(
-  "CIK0001844452",
+  CIK,
   latest.accessionNumber,
   latest.primaryDoc,
   true
 );
 
+const index = getFilingUrlIndexHtml(
+  CIK,
+  latest.accessionNumber,
+  latest.primaryDoc
+);
+
 console.log(latest);
 console.log("\nFiling URL:");
-console.log(url);
 console.log(url_xml_true);
+console.log(url_xml_false);
+console.log(index);
 
-// Fetch the xml
-const xmlContent = await fetchFiling(url_xml_true);
-console.log("\nXML Content Length:", xmlContent.length);
-const parser = new xml2js.Parser();
+// 13F form has a different /route to it
+// Need to parse html file and look for it
+console.log(await get13FXmlUrl(index));
 
-// Parse the data to JSON
-try {
-  const result = await parser.parseStringPromise(xmlContent);
-  console.log(result);
-} catch (error) {
-  console.error("Error parsing XML:", error);
-}
+// // Fetch the xml
+// const xmlContent = await fetchFiling(url_xml_true);
+// console.log("\nXML Content Length:", xmlContent.length);
+// const parser = new xml2js.Parser();
+
+// // Parse the data to JSON
+// try {
+//   const result = await parser.parseStringPromise(xmlContent);
+//   console.log(result);
+// } catch (error) {
+//   console.error("Error parsing XML:", error);
+// }
