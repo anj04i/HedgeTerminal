@@ -1,3 +1,5 @@
+import xml2js from "xml2js";
+
 // SEC uses CIK as identification for each entity
 // Eg. CIK0001037389 --> Renaissance Technologies
 // CIK is padded length of 10 numbers + 'CIK' string
@@ -83,14 +85,14 @@ function unpadCIK(paddedCik: string): string {
 function getFilingUrl(
   cik: string,
   accessionNumber: string,
-  primaryDoc: string
+  primaryDoc: string,
+  wantXML: boolean = false
 ) {
   const cleanAccession = accessionNumber.replace(/-/g, "");
   return `https://www.sec.gov/Archives/edgar/data/${unpadCIK(
     cik
-  )}/${cleanAccession}/${primaryDoc}`;
+  )}/${cleanAccession}/${wantXML ? "primary_doc.xml" : primaryDoc}`;
 }
-
 async function fetchDetails(cik: string): Promise<SECFiling> {
   const response = await fetch(`${SUBMISSION_URL}/${cik}.json`, {
     headers: {
@@ -135,12 +137,31 @@ const latest = {
 const url = getFilingUrl(
   "CIK0001844452",
   latest.accessionNumber,
-  latest.primaryDoc
+  latest.primaryDoc,
+  false
+);
+
+const url_xml_true = getFilingUrl(
+  "CIK0001844452",
+  latest.accessionNumber,
+  latest.primaryDoc,
+  true
 );
 
 console.log(latest);
 console.log("\nFiling URL:");
 console.log(url);
+console.log(url_xml_true);
 
-const xmlContent = await fetchFiling(url);
+// Fetch the xml
+const xmlContent = await fetchFiling(url_xml_true);
 console.log("\nXML Content Length:", xmlContent.length);
+const parser = new xml2js.Parser();
+
+// Parse the data to JSON
+try {
+  const result = await parser.parseStringPromise(xmlContent);
+  console.log(result);
+} catch (error) {
+  console.error("Error parsing XML:", error);
+}
