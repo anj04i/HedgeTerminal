@@ -1,4 +1,5 @@
 import { Extract13FRecord } from "../lib/types";
+import logger from "../utils/logger";
 import { pool } from "./config";
 
 export async function upsert13FRecords(
@@ -28,6 +29,8 @@ export async function upsert13FRecords(
   }
 
   const client = await pool.connect();
+  logger.info(`Upserting ${records.length} filings for ${name} (CIK: ${cik})`);
+
   try {
     await client.query("BEGIN");
 
@@ -43,12 +46,35 @@ export async function upsert13FRecords(
 
       await client.query(query, valuesList);
     }
-
     await client.query("COMMIT");
+    logger.info(`Successfully upserted ${records.length} filings for ${name}`);
   } catch (err) {
+    logger.error(`Failed to upsert filings for ${name}: ${err}`);
     await client.query("ROLLBACK");
     throw err;
   } finally {
     client.release();
+  }
+}
+
+export async function getFundFilings(identifier: string): Promise<any[]> {
+  logger.info(`Fetching filings for identifier: ${identifier}`);
+  const isCIK = /^\d+$/.test(identifier);
+
+  const query = `
+    SELECT * FROM FILINGS 
+    WHERE ${isCIK ? "cik = $1" : "LOWER(name) LIKE LOWER($1)"}
+    ORDER BY filing_date DESC
+  `;
+
+  const params = [isCIK ? identifier : `%${identifier}%`];
+
+  try {
+    const result = await pool.query(query, params);
+    logger.info(`Retrieved ${result.rows.length} filings for ${identifier}`);
+    return result.rows;
+  } catch (err) {
+    logger.error(`Error fetching fund filings for ${identifier}: ${err}`);
+    throw err;
   }
 }
