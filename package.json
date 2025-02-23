@@ -3,6 +3,7 @@
   "module": "index.ts",
   "type": "module",
   "devDependencies": {
+    "@types/pg": "^8.11.11",
     "bun-types": "latest"
   },
   "peerDependencies": {
@@ -11,6 +12,7 @@
   "dependencies": {
     "@types/xml2js": "^0.4.14",
     "p-limit": "^6.2.0",
+    "pg": "^8.13.3",
     "xml2js": "^0.6.2"
   }
 }
