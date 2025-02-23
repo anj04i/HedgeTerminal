@@ -16,5 +16,9 @@
     "pg": "^8.13.3",
     "winston": "^3.17.0",
     "xml2js": "^0.6.2"
+  },
+  "scripts": {
+    "server": "bun run src/app.ts",
+    "sync-funds": "bun run src/scripts/index.ts"
   }
 }
