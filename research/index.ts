@@ -74,6 +74,13 @@ interface SECFiling {
   };
 }
 
+interface SEC13FSummary {
+  otherIncludedManagersCount: string;
+  tableEntryTotal: string;
+  tableValueTotal: string;
+  isConfidentialOmitted: string;
+}
+
 function padCIK(cik: string | number): string {
   return `CIK${cik.toString().padStart(10, "0")}`;
 }
@@ -149,69 +156,53 @@ async function get13FXmlUrl(indexUrl: string) {
   return new URL(xmlFiles[0], indexUrl).href;
 }
 
+async function fetchValue(parser: xml2js.Parser, url: string) {
+  const xmlContent = await fetchFiling(url);
+
+  try {
+    const result = await parser.parseStringPromise(xmlContent);
+    const summary = result.edgarSubmission.formData[0].summaryPage[0];
+    const totalValue = summary.tableValueTotal[0];
+    return Number(totalValue);
+  } catch (error) {
+    console.error("Error parsing XML:", error);
+  }
+}
+
 const SUBMISSION_URL = "https://data.sec.gov/submissions";
 
 // TESTING
-const CIK = padCIK(1037389);
+const parser = new xml2js.Parser();
+const CIK = padCIK(1067983);
 const details = await fetchDetails(CIK);
 
 const { form, filingDate, accessionNumber, primaryDocument } =
   details.filings.recent;
 
-// Use raw for loop, insanely fast for large datasets ~200ms
-const filings = [];
+const filings13F = [];
+
 for (let i = 0; i < form.length; i++) {
-  filings.push({
-    form: form[i],
-    date: filingDate[i],
-    accessionNumber: accessionNumber[i],
-    primaryDoc: primaryDocument[i],
-  });
+  if (form[i].startsWith("13")) {
+    const filing = {
+      form: form[i],
+      date: filingDate[i],
+      accessionNumber: accessionNumber[i],
+      primaryDoc: primaryDocument[i],
+      url: getFilingUrl(CIK, accessionNumber[i], primaryDocument[i], true),
+      value: fetchValue(
+        parser,
+        getFilingUrl(CIK, accessionNumber[i], primaryDocument[i], true)
+      ),
+    };
+    filings13F.push(filing);
+  }
 }
 
-const filings13F = filings.filter((f) => f.form.startsWith("13"));
-
-const latest = filings13F[0];
-
-const url_xml_false = getFilingUrl(
-  CIK,
-  latest.accessionNumber,
-  latest.primaryDoc,
-  false
+const results = await Promise.all(
+  filings13F.map(async (filing) => ({
+    ...filing,
+    value: await filing.value,
+  }))
 );
 
-const url_xml_true = getFilingUrl(
-  CIK,
-  latest.accessionNumber,
-  latest.primaryDoc,
-  true
-);
-
-const index = getFilingUrlIndexHtml(
-  CIK,
-  latest.accessionNumber,
-  latest.primaryDoc
-);
-
-console.log(latest);
-console.log("\nFiling URL:");
-console.log(url_xml_true);
-console.log(url_xml_false);
-console.log(index);
-
-// 13F form has a different /route to it
-// Need to parse html file and look for it
-console.log(await get13FXmlUrl(index));
-
-// // Fetch the xml
-// const xmlContent = await fetchFiling(url_xml_true);
-// console.log("\nXML Content Length:", xmlContent.length);
-// const parser = new xml2js.Parser();
-
-// // Parse the data to JSON
-// try {
-//   const result = await parser.parseStringPromise(xmlContent);
-//   console.log(result);
-// } catch (error) {
-//   console.error("Error parsing XML:", error);
-// }
+console.log(results);
