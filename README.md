@@ -45,7 +45,7 @@ pm2 start ecosystem.config.cjs --only sync-funds
 launch the server and dashboard:
 
 ```bash
-pm2 start ecosystem.config.js --only server,dashboard
+pm2 start ecosystem.config.cjs --only server,dashboard
 ```
 
 ## accessing the dashboard
