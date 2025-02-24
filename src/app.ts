@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { getFundFilings } from "./db";
 import logger from "./utils/logger";
+import { funds } from "./scripts/config";
 
 const app = new Hono();
 
@@ -9,6 +10,15 @@ app.use("*", cors());
 
 app.get("/health", async (c) => {
   return c.text("ok");
+});
+
+app.get("/api/config", async (c) => {
+  return c.json(
+    {
+      funds: funds,
+    },
+    200
+  );
 });
 
 app.get("/api/funds/:identifier/filings", async (c) => {

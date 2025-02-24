@@ -9,13 +9,13 @@ from components.filing_table import FilingTable
 
 
 class FundView:
-    def __init__(self, api: FundsAPI):
+    def __init__(self, api):
         self.api = api
 
     def _calculate_metrics(self, df: pd.DataFrame) -> Dict:
-        latest_value = df["total_value"].iloc[-1]
-        latest_date = df["filing_date"].iloc[-1]
-        prev_value = df["total_value"].iloc[-2] if len(df) > 1 else None
+        latest_value = df["value_usd"].iloc[-1]
+        latest_quarter = df["quarter"].iloc[-1]
+        prev_value = df["value_usd"].iloc[-2] if len(df) > 1 else None
 
         pct_change = None
         if prev_value is not None:
@@ -23,9 +23,9 @@ class FundView:
 
         return {
             "Latest AUM": (f"${latest_value:,.0f}", pct_change),
-            "Last Filing": (latest_date.strftime("%Y-%m-%d"), None),
-            "Total Filings": (str(len(df)), None),
-            "First Filing": (df["filing_date"].iloc[0].strftime("%Y-%m-%d"), None),
+            "Last Quarter": (latest_quarter, None),
+            "Total Quarters": (str(len(df)), None),
+            "First Quarter": (df["quarter"].iloc[0], None),
         }
 
     def render(self, fund_name: str, fund_id: str):
@@ -35,9 +35,8 @@ class FundView:
             return
 
         df = pd.DataFrame(filings)
-        df["filing_date"] = pd.to_datetime(df["filing_date"])
-        df["total_value"] = pd.to_numeric(df["total_value"])
-        df = df.sort_values("filing_date")
+        df["value_usd"] = pd.to_numeric(df["value_usd"])
+        df = df.sort_values("quarter")
 
         if len(df) > 0:
             metrics = self._calculate_metrics(df)
@@ -47,4 +46,4 @@ class FundView:
             FundChart.render_aum_chart(df, fund_name)
 
             st.header("Filing History")
-            FilingTable.render(df)
+            FilingTable.render(df, fund_name)

@@ -102,5 +102,6 @@ export type SEC13FSummary = {
 export type Extract13FRecord = {
   accessionNumber: string;
   filingDate: string;
+  reportDate: string;
   totalValue: number;
 };

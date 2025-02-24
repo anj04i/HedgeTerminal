@@ -6,13 +6,7 @@ from views.fund_view import FundView
 class FundDashboard:
     def __init__(self):
         self.api = FundsAPI()
-        self.funds = {
-            "Bridgewater": "1649339",
-            "Renaissance": "1067983",
-            "D.E. Shaw": "1555283",
-            "Two Sigma": "1350694",
-            "Citadel": "1167483",
-        }
+        self.funds = self.api.get_funds()
 
     def run(self):
         st.set_page_config(layout="wide", page_title="Fund 13F Dashboard")

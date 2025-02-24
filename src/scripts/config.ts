@@ -5,35 +5,23 @@ export type Fund = {
 
 export const funds: Fund[] = [
   {
-    cik: "1649339",
-    name: "Bridgewater Associates",
+    cik: "1067983",
+    name: "Berkshire Hathaway",
   },
   {
     cik: "1067983",
     name: "Renaissance Technologies",
   },
   {
-    cik: "1555283",
-    name: "D.E. Shaw",
+    cik: "1336528",
+    name: "Pershing Square Capital Management",
   },
   {
-    cik: "1350694",
+    cik: "1179392",
     name: "Two Sigma Investments",
   },
   {
-    cik: "1167483",
+    cik: "1423053",
     name: "Citadel Advisors",
-  },
-  {
-    cik: "1608057",
-    name: "AQR Capital Management",
-  },
-  {
-    cik: "1608842",
-    name: "Point72 Asset Management",
-  },
-  {
-    cik: "1656456",
-    name: "Millennium Management",
   },
 ];

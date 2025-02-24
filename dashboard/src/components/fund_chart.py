@@ -10,8 +10,8 @@ class FundChart:
 
         fig.add_trace(
             go.Scatter(
-                x=df["filing_date"],
-                y=df["total_value"],
+                x=df["quarter"],
+                y=df["value_usd"],
                 name="AUM",
                 mode="lines",
                 line=dict(width=2),
@@ -20,7 +20,7 @@ class FundChart:
 
         fig.update_layout(
             title=f"{fund_name} Assets Under Management",
-            xaxis_title="Date",
+            xaxis_title="Quarter",
             yaxis_title="AUM ($)",
             height=400,
             showlegend=True,

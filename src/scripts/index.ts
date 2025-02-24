@@ -11,7 +11,7 @@ export async function syncFunds13F(funds: Fund[]): Promise<void> {
       const history = await edgar.get13FHistory();
       await upsert13FRecords(fund.cik, fund.name, history);
       logger.info(`Successfully processed ${fund.name}`);
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
     } catch (err) {
       logger.error(`Failed to process fund ${fund.name} (${fund.cik}): ${err}`);
       continue;

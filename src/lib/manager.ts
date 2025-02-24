@@ -100,7 +100,8 @@ export class EdgarManager {
     const filtered: SECFilingRecord[] = [];
     for (let i = 0; i < filings.length; i++) {
       const form = filings[i].form;
-      if (form === "13F-HR" || form === "13F-HR/A") {
+      // Ignoring ammendments (form === "13F-HR/A")
+      if (form === "13F-HR") {
         filtered.push(filings[i]);
       }
     }
@@ -140,6 +141,7 @@ export class EdgarManager {
             ? {
                 accessionNumber: filing.accessionNumber,
                 filingDate: filing.filingDate,
+                reportDate: filing.reportDate,
                 totalValue: res.data,
               }
             : null

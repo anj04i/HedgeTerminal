@@ -17,15 +17,17 @@ export async function upsert13FRecords(
       name,
       record.accessionNumber,
       record.filingDate,
+      record.reportDate,
       record.totalValue
     );
 
     valuePlaceholders.push(
       `($${parameterCount}, $${parameterCount + 1}, $${parameterCount + 2}, $${
         parameterCount + 3
-      }, $${parameterCount + 4})`
+      }, $${parameterCount + 4}, $${parameterCount + 5})`
     );
-    parameterCount += 5;
+
+    parameterCount += 6;
   }
 
   const client = await pool.connect();
@@ -37,11 +39,12 @@ export async function upsert13FRecords(
     if (valuesList.length > 0) {
       const query = `
             INSERT INTO FILINGS (
-              cik, name, accession_number, filing_date, total_value
+              cik, name, accession_number, filing_date, report_date, total_value
             ) VALUES ${valuePlaceholders.join(", ")}
             ON CONFLICT (cik, accession_number) DO UPDATE SET
               name = EXCLUDED.name,
               filing_date = EXCLUDED.filing_date,
+              report_date = EXCLUDED.report_date,
               total_value = EXCLUDED.total_value`;
 
       await client.query(query, valuesList);
@@ -62,10 +65,14 @@ export async function getFundFilings(identifier: string): Promise<any[]> {
   const isCIK = /^\d+$/.test(identifier);
 
   const query = `
-    SELECT * FROM FILINGS 
-    WHERE ${isCIK ? "cik = $1" : "LOWER(name) LIKE LOWER($1)"}
-    ORDER BY filing_date DESC
-  `;
+  SELECT 
+    cik,
+    CONCAT('Q', EXTRACT(QUARTER FROM report_date), ' ', EXTRACT(YEAR FROM report_date)) as quarter,
+    ROUND(total_value::numeric, 2) as value_usd
+  FROM FILINGS 
+  WHERE ${isCIK ? "cik = $1" : "LOWER(name) LIKE LOWER($1)"}
+  ORDER BY report_date DESC
+`;
 
   const params = [isCIK ? identifier : `%${identifier}%`];
 
