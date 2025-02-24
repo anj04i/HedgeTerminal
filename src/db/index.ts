@@ -71,7 +71,7 @@ export async function getFundFilings(identifier: string): Promise<any[]> {
     ROUND(total_value::numeric, 2) as value_usd
   FROM FILINGS 
   WHERE ${isCIK ? "cik = $1" : "LOWER(name) LIKE LOWER($1)"}
-  ORDER BY report_date DESC
+  ORDER BY report_date
 `;
 
   const params = [isCIK ? identifier : `%${identifier}%`];

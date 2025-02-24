@@ -1,8 +1,7 @@
+import re
 from typing import Dict
 import streamlit as st
 import pandas as pd
-
-from api import FundsAPI
 from components.metrics_panel import MetricsPanel
 from components.fund_chart import FundChart
 from components.filing_table import FilingTable
@@ -36,7 +35,6 @@ class FundView:
 
         df = pd.DataFrame(filings)
         df["value_usd"] = pd.to_numeric(df["value_usd"])
-        df = df.sort_values("quarter")
 
         if len(df) > 0:
             metrics = self._calculate_metrics(df)
