@@ -67,7 +67,7 @@ export async function getFundFilings(identifier: string): Promise<any[]> {
   const query = `
   SELECT 
     cik,
-    CONCAT('Q', EXTRACT(QUARTER FROM report_date), ' ', EXTRACT(YEAR FROM report_date)) as quarter,
+    CONCAT(EXTRACT(YEAR FROM report_date), '-', EXTRACT(QUARTER FROM report_date)) as quarter,
     ROUND(total_value::numeric, 2) as value_usd
   FROM FILINGS 
   WHERE ${isCIK ? "cik = $1" : "LOWER(name) LIKE LOWER($1)"}
