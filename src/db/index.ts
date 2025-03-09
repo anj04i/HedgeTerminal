@@ -85,3 +85,96 @@ export async function getFundFilings(identifier: string): Promise<any[]> {
     throw err;
   }
 }
+
+export async function getFundStats(identifier: string): Promise<any> {
+  const isCIK = /^\d+$/.test(identifier);
+
+  const query = `
+    SELECT 
+      aum,
+      quarter,
+      qoq_change,
+      recent_trend AS yoy_growth,
+      total_appreciation,
+      volatility,
+      max_growth,
+      max_decline,
+      growth_consistency
+    FROM fund_stats
+    WHERE ${isCIK ? 'cik = $1' : 'cik IN (SELECT cik FROM FILINGS WHERE LOWER(name) LIKE LOWER($1) LIMIT 1)'}
+  `;
+
+  const params = [isCIK ? identifier : `%${identifier}%`];
+
+  try {
+    const result = await pool.query(query, params);
+    if (!result.rows.length) {
+      return {
+        aum: 0,
+        quarter: '',
+        qoq_change: '0',
+        yoy_growth: 'N/A',
+        total_appreciation: '0',
+        volatility: '0',
+        max_growth: '0',
+        max_decline: '0',
+        growth_consistency: '0',
+      };
+    }
+
+    logger.info(`Retrieved stats for ${identifier}`);
+    return result.rows[0];
+  } catch (err) {
+    logger.error(`Error fetching stats for ${identifier}: ${err}`);
+    throw err;
+  }
+}
+
+export async function getFundVolatility(identifier: string): Promise<any> {
+  const isCIK = /^\d+$/.test(identifier);
+
+  const query = `
+    WITH filing_changes AS (
+      SELECT 
+        f1.report_date,
+        TO_CHAR(f1.report_date, 'YYYY-Q') AS quarter,
+        ROUND(f1.total_value::numeric, 0) AS value_usd,
+        LAG(f1.total_value) OVER (ORDER BY f1.report_date) AS prev_value,
+        CASE 
+          WHEN LAG(f1.total_value) OVER (ORDER BY f1.report_date) IS NOT NULL 
+            AND LAG(f1.total_value) OVER (ORDER BY f1.report_date) != 0
+          THEN ROUND(((f1.total_value / LAG(f1.total_value) OVER (ORDER BY f1.report_date) - 1) * 100)::numeric, 2) 
+          ELSE 0 
+        END AS percentage_change
+      FROM FILINGS f1
+      WHERE ${isCIK ? 'f1.cik = $1' : 'LOWER(f1.name) LIKE LOWER($1)'}
+        AND f1.total_value IS NOT NULL
+      ORDER BY f1.report_date
+    )
+    SELECT 
+      quarter,
+      COALESCE(percentage_change::text, '0') AS change,
+      percentage_change::text AS value
+    FROM filing_changes
+    WHERE percentage_change IS NOT NULL
+    ORDER BY report_date ASC
+  `;
+
+  const params = [isCIK ? identifier : `%${identifier}%`];
+
+  try {
+    const result = await pool.query(query, params);
+
+    const processedData = result.rows.map((row) => ({
+      quarter: row.quarter,
+      change: row.change,
+      value: parseFloat(row.value),
+    }));
+
+    logger.info(`Retrieved volatility data for ${identifier}`);
+    return processedData;
+  } catch (err) {
+    logger.error(`Error fetching volatility data for ${identifier}: ${err}`);
+    throw err;
+  }
+}

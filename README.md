@@ -45,6 +45,11 @@ or with pm2:
 pm2 start ecosystem.config.cjs --only sync-funds
 ```
 
+once completed, run this:
+```bash
+psql -U your_user -d your_database -f src/db/stats.sql
+```
+
 ## starting services
 
 launch the server and dashboard:
@@ -72,4 +77,11 @@ the dashboard runs at:
 
 ```
 http://localhost:8501
+```
+
+## try webui (experimental)
+
+```bash
+cd webui
+bun run dev
 ```

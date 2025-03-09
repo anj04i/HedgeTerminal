@@ -19,7 +19,7 @@
     "xml2js": "^0.6.2"
   },
   "scripts": {
-    "server": "bun run src/app.ts",
+    "server": "bun run --hot src/app.ts",
     "sync-funds": "bun run src/scripts/index.ts",
     "format": "prettier --write \"**/*.{ts,js}\""
   }
