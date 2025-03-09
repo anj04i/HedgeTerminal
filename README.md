@@ -44,6 +44,19 @@ pm2 start ecosystem.config.cjs --only sync-funds
 
 launch the server and dashboard:
 
+
+```bash
+bun run server
+```
+
+
+```bash
+cd/dashboard
+uv run python -m streamlit run src/main.py
+```
+
+or with pm2:
+
 ```bash
 pm2 start ecosystem.config.cjs --only server,dashboard
 ```
