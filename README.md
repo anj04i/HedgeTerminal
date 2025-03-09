@@ -17,6 +17,10 @@ ensure you have:
 - [bun](https://bun.sh)
 - [uv](https://github.com/astral-sh/uv)
 - [pm2](https://pm2.keymetrics.io/)
+- [postgres](https://www.postgresql.org/download/)
+
+## environment variables
+refer `.env.example`
 
 ## database setup
 
@@ -25,6 +29,7 @@ initialize the database by creating the required table:
 ```bash
 psql -U your_user -d your_database -f src/db/schema.sql
 ```
+
 
 ## syncing data
 
