@@ -1,4 +1,4 @@
-import xml2js from "xml2js";
+import xml2js from 'xml2js';
 import {
   CIKType,
   ErrorType,
@@ -6,14 +6,14 @@ import {
   Result,
   SECFiling,
   SECFilingRecord,
-} from "./types";
-import { CIK } from "./cik";
-import pLimit from "p-limit";
+} from './types';
+import { CIK } from './cik';
+import pLimit from 'p-limit';
 
 export class EdgarManager {
   private CIK: CIKType;
   private parser = new xml2js.Parser();
-  private SUBMISSION_URL = "https://data.sec.gov/submissions";
+  private SUBMISSION_URL = 'https://data.sec.gov/submissions';
 
   constructor(cik: string | number) {
     this.CIK = new CIK(cik);
@@ -27,7 +27,7 @@ export class EdgarManager {
     try {
       const response = await fetch(url, {
         headers: {
-          "User-Agent": "Company Name name@example.com",
+          'User-Agent': 'Company Name name@example.com',
         },
       });
 
@@ -41,7 +41,7 @@ export class EdgarManager {
         };
       }
 
-      const data = url.endsWith(".xml")
+      const data = url.endsWith('.xml')
         ? await response.text()
         : await response.json();
 
@@ -51,7 +51,7 @@ export class EdgarManager {
         success: false,
         error: {
           type: ErrorType.FETCH_ERROR,
-          error: err instanceof Error ? err : new Error("Unknown error"),
+          error: err instanceof Error ? err : new Error('Unknown error'),
         },
       };
     }
@@ -65,7 +65,7 @@ export class EdgarManager {
   }
 
   private prepareXMLFilingURL(accessionNumber: string) {
-    const cleanAccession = accessionNumber.replace(/-/g, "");
+    const cleanAccession = accessionNumber.replace(/-/g, '');
     return `https://www.sec.gov/Archives/edgar/data/${this.CIK.unpad()}/${cleanAccession}/primary_doc.xml`;
   }
 
@@ -101,7 +101,7 @@ export class EdgarManager {
     for (let i = 0; i < filings.length; i++) {
       const form = filings[i].form;
       // Ignoring ammendments 13F-HR/A
-      if (form === "13F-HR") {
+      if (form === '13F-HR') {
         filtered.push(filings[i]);
       }
     }
@@ -109,7 +109,7 @@ export class EdgarManager {
   }
 
   public async fetch13FRecord(
-    recent: SECFilingRecord
+    recent: SECFilingRecord,
   ): Promise<Result<number>> {
     const res = await this.get<string>(recent.filingURL);
     if (!res.success) return res;
@@ -119,8 +119,8 @@ export class EdgarManager {
       const schemaVersion = result.edgarSubmission?.schemaVersion || '';
       const summary = result.edgarSubmission.formData[0].summaryPage[0];
       let totalValue = Number(summary.tableValueTotal[0]);
-      
-      if(schemaVersion != "X0202"){
+
+      if (schemaVersion != 'X0202') {
         totalValue *= 1000; // Convert to $$ for non-X0202
       }
 
@@ -130,14 +130,14 @@ export class EdgarManager {
         success: false,
         error: {
           type: ErrorType.PARSE_ERROR,
-          error: err instanceof Error ? err : new Error("Unknown error"),
+          error: err instanceof Error ? err : new Error('Unknown error'),
         },
       };
     }
   }
 
   public async extract13FRecords(
-    recent: SECFilingRecord[]
+    recent: SECFilingRecord[],
   ): Promise<Extract13FRecord[]> {
     const limit = pLimit(10);
     const promises = recent.map((filing) =>
@@ -150,9 +150,9 @@ export class EdgarManager {
                 reportDate: filing.reportDate,
                 totalValue: res.data,
               }
-            : null
-        )
-      )
+            : null,
+        ),
+      ),
     );
 
     const results = await Promise.all(promises);

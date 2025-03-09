@@ -4,7 +4,8 @@
   "type": "module",
   "devDependencies": {
     "@types/pg": "^8.11.11",
-    "bun-types": "latest"
+    "bun-types": "latest",
+    "prettier": "^3.5.3"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
@@ -19,6 +20,7 @@
   },
   "scripts": {
     "server": "bun run src/app.ts",
-    "sync-funds": "bun run src/scripts/index.ts"
+    "sync-funds": "bun run src/scripts/index.ts",
+    "format": "prettier --write \"**/*.{ts,js}\""
   }
 }

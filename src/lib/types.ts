@@ -1,8 +1,8 @@
-import { CIK } from "./cik";
+import { CIK } from './cik';
 
 export enum ErrorType {
-  FETCH_ERROR = "FETCH_ERROR",
-  PARSE_ERROR = "PARSE_ERROR",
+  FETCH_ERROR = 'FETCH_ERROR',
+  PARSE_ERROR = 'PARSE_ERROR',
 }
 
 export type ErrorTypes = { type: ErrorType; error: Error };

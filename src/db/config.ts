@@ -1,5 +1,5 @@
-import { Pool } from "pg";
-import logger from "../utils/logger";
+import { Pool } from 'pg';
+import logger from '../utils/logger';
 
 export const pool = new Pool({
   user: process.env.POSTGRES_USER,
@@ -9,7 +9,7 @@ export const pool = new Pool({
   port: Number(process.env.POSTGRES_PORT),
 });
 
-logger.info("Database pool initialized");
+logger.info('Database pool initialized');
 
 export async function closePool() {
   await pool.end();

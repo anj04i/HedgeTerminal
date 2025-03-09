@@ -1,11 +1,11 @@
-import { Extract13FRecord } from "../lib/types";
-import logger from "../utils/logger";
-import { pool } from "./config";
+import { Extract13FRecord } from '../lib/types';
+import logger from '../utils/logger';
+import { pool } from './config';
 
 export async function upsert13FRecords(
   cik: string,
   name: string,
-  records: Extract13FRecord[]
+  records: Extract13FRecord[],
 ): Promise<void> {
   const valuesList: any[] = [];
   const valuePlaceholders: string[] = [];
@@ -18,13 +18,13 @@ export async function upsert13FRecords(
       record.accessionNumber,
       record.filingDate,
       record.reportDate,
-      record.totalValue
+      record.totalValue,
     );
 
     valuePlaceholders.push(
       `($${parameterCount}, $${parameterCount + 1}, $${parameterCount + 2}, $${
         parameterCount + 3
-      }, $${parameterCount + 4}, $${parameterCount + 5})`
+      }, $${parameterCount + 4}, $${parameterCount + 5})`,
     );
 
     parameterCount += 6;
@@ -34,13 +34,13 @@ export async function upsert13FRecords(
   logger.info(`Upserting ${records.length} filings for ${name} (CIK: ${cik})`);
 
   try {
-    await client.query("BEGIN");
+    await client.query('BEGIN');
 
     if (valuesList.length > 0) {
       const query = `
             INSERT INTO FILINGS (
               cik, name, accession_number, filing_date, report_date, total_value
-            ) VALUES ${valuePlaceholders.join(", ")}
+            ) VALUES ${valuePlaceholders.join(', ')}
             ON CONFLICT (cik, accession_number) DO UPDATE SET
               name = EXCLUDED.name,
               filing_date = EXCLUDED.filing_date,
@@ -49,11 +49,11 @@ export async function upsert13FRecords(
 
       await client.query(query, valuesList);
     }
-    await client.query("COMMIT");
+    await client.query('COMMIT');
     logger.info(`Successfully upserted ${records.length} filings for ${name}`);
   } catch (err) {
     logger.error(`Failed to upsert filings for ${name}: ${err}`);
-    await client.query("ROLLBACK");
+    await client.query('ROLLBACK');
     throw err;
   } finally {
     client.release();
@@ -70,7 +70,7 @@ export async function getFundFilings(identifier: string): Promise<any[]> {
     CONCAT(EXTRACT(YEAR FROM report_date), '-', EXTRACT(QUARTER FROM report_date)) as quarter,
     ROUND(total_value::numeric, 2) as value_usd
   FROM FILINGS 
-  WHERE ${isCIK ? "cik = $1" : "LOWER(name) LIKE LOWER($1)"}
+  WHERE ${isCIK ? 'cik = $1' : 'LOWER(name) LIKE LOWER($1)'}
   ORDER BY report_date
 `;
 

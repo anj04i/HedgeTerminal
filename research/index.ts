@@ -1,4 +1,4 @@
-import xml2js from "xml2js";
+import xml2js from 'xml2js';
 
 // SEC uses CIK as identification for each entity
 // Eg. CIK0001037389 --> Renaissance Technologies
@@ -82,41 +82,41 @@ interface SEC13FSummary {
 }
 
 function padCIK(cik: string | number): string {
-  return `CIK${cik.toString().padStart(10, "0")}`;
+  return `CIK${cik.toString().padStart(10, '0')}`;
 }
 
 function unpadCIK(paddedCik: string): string {
-  return paddedCik.replace("CIK", "").replace(/^0+/, "");
+  return paddedCik.replace('CIK', '').replace(/^0+/, '');
 }
 
 function getFilingUrl(
   cik: string,
   accessionNumber: string,
   primaryDoc: string,
-  wantXML: boolean = false
+  wantXML: boolean = false,
 ) {
-  const cleanAccession = accessionNumber.replace(/-/g, "");
+  const cleanAccession = accessionNumber.replace(/-/g, '');
   return `https://www.sec.gov/Archives/edgar/data/${unpadCIK(
-    cik
-  )}/${cleanAccession}/${wantXML ? "primary_doc.xml" : primaryDoc}`;
+    cik,
+  )}/${cleanAccession}/${wantXML ? 'primary_doc.xml' : primaryDoc}`;
 }
 
 function getFilingUrlIndexHtml(
   cik: string,
   accessionNumber: string,
   primaryDoc: string,
-  wantXML: boolean = false
+  wantXML: boolean = false,
 ) {
-  const cleanAccession = accessionNumber.replace(/-/g, "");
+  const cleanAccession = accessionNumber.replace(/-/g, '');
   return `https://www.sec.gov/Archives/edgar/data/${unpadCIK(
-    cik
+    cik,
   )}/${cleanAccession}/${accessionNumber}-index.html`;
 }
 
 async function fetchDetails(cik: string): Promise<SECFiling> {
   const response = await fetch(`${SUBMISSION_URL}/${cik}.json`, {
     headers: {
-      "User-Agent": "Your Company Name yourname@example.com", // Required by SEC
+      'User-Agent': 'Your Company Name yourname@example.com', // Required by SEC
     },
   });
 
@@ -130,7 +130,7 @@ async function fetchDetails(cik: string): Promise<SECFiling> {
 async function fetchFiling(url: string) {
   const response = await fetch(url, {
     headers: {
-      "User-Agent": "Your Company Name yourname@example.com",
+      'User-Agent': 'Your Company Name yourname@example.com',
     },
   });
 
@@ -143,7 +143,7 @@ async function fetchFiling(url: string) {
 
 async function get13FXmlUrl(indexUrl: string) {
   const response = await fetch(indexUrl, {
-    headers: { "User-Agent": "Your Company Name yourname@example.com" },
+    headers: { 'User-Agent': 'Your Company Name yourname@example.com' },
   });
   if (!response.ok)
     throw new Error(`Failed to fetch index: ${response.status}`);
@@ -151,8 +151,8 @@ async function get13FXmlUrl(indexUrl: string) {
   const matches = [...html.matchAll(/href="([^"]+\.xml)"/gi)];
   const xmlFiles = matches
     .map((m) => m[1])
-    .filter((f) => !f.includes("primary_doc"));
-  if (!xmlFiles.length) throw new Error("No valid 13F XML found");
+    .filter((f) => !f.includes('primary_doc'));
+  if (!xmlFiles.length) throw new Error('No valid 13F XML found');
   return new URL(xmlFiles[0], indexUrl).href;
 }
 
@@ -165,11 +165,11 @@ async function fetchValue(parser: xml2js.Parser, url: string) {
     const totalValue = summary.tableValueTotal[0];
     return Number(totalValue);
   } catch (error) {
-    console.error("Error parsing XML:", error);
+    console.error('Error parsing XML:', error);
   }
 }
 
-const SUBMISSION_URL = "https://data.sec.gov/submissions";
+const SUBMISSION_URL = 'https://data.sec.gov/submissions';
 
 // TESTING
 const parser = new xml2js.Parser();
@@ -182,7 +182,7 @@ const { form, filingDate, accessionNumber, primaryDocument } =
 const filings13F = [];
 
 for (let i = 0; i < form.length; i++) {
-  if (form[i].startsWith("13")) {
+  if (form[i].startsWith('13')) {
     const filing = {
       form: form[i],
       date: filingDate[i],
@@ -191,7 +191,7 @@ for (let i = 0; i < form.length; i++) {
       url: getFilingUrl(CIK, accessionNumber[i], primaryDocument[i], true),
       value: fetchValue(
         parser,
-        getFilingUrl(CIK, accessionNumber[i], primaryDocument[i], true)
+        getFilingUrl(CIK, accessionNumber[i], primaryDocument[i], true),
       ),
     };
     filings13F.push(filing);
@@ -202,7 +202,7 @@ const results = await Promise.all(
   filings13F.map(async (filing) => ({
     ...filing,
     value: await filing.value,
-  }))
+  })),
 );
 
 console.log(results);

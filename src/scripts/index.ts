@@ -1,7 +1,7 @@
-import { upsert13FRecords } from "../db";
-import { EdgarManager } from "../lib/manager";
-import logger from "../utils/logger";
-import { Fund, funds } from "./config";
+import { upsert13FRecords } from '../db';
+import { EdgarManager } from '../lib/manager';
+import logger from '../utils/logger';
+import { Fund, funds } from './config';
 
 export async function syncFunds13F(funds: Fund[]): Promise<void> {
   logger.info(`Starting 13F sync for ${funds.length} funds`);
@@ -17,7 +17,7 @@ export async function syncFunds13F(funds: Fund[]): Promise<void> {
       continue;
     }
   }
-  logger.info("Completed 13F sync for all funds");
+  logger.info('Completed 13F sync for all funds');
 }
 
 syncFunds13F(funds);
