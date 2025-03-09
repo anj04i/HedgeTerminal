@@ -27,6 +27,11 @@ class FundView:
             "First Quarter": (df["quarter"].iloc[0], None),
         }
 
+    def _calculate_volatility(self, df: pd.DataFrame) -> pd.DataFrame:
+        df["pct_change"] = df["value_usd"].pct_change() * 100
+        df["volatility"] = df["pct_change"].rolling(window=4).std()
+        return df.dropna()
+
     def render(self, fund_name: str, fund_id: str):
         filings = self.api.get_fund_filings(fund_id)
         if not filings:
@@ -35,6 +40,7 @@ class FundView:
 
         df = pd.DataFrame(filings)
         df["value_usd"] = pd.to_numeric(df["value_usd"])
+        df = self._calculate_volatility(df)
 
         if len(df) > 0:
             metrics = self._calculate_metrics(df)
@@ -42,6 +48,13 @@ class FundView:
 
             st.header("AUM History")
             FundChart.render_aum_chart(df, fund_name)
+
+            st.header("AUM Volatility")
+            st.markdown("This chart shows the rolling 4-quarter standard deviation of AUM percentage changes, indicating stability. A value above 10% suggests high volatility.")
+            if len(df) < 4:
+                st.warning("Not enough data for volatility analysis (requires at least 4 quarters).")
+            else:
+                FundChart.render_volatility_chart(df, fund_name)
 
             st.header("Filing History")
             FilingTable.render(df, fund_name)
