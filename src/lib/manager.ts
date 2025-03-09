@@ -19,9 +19,9 @@ export class EdgarManager {
     this.CIK = new CIK(cik);
   }
 
-  private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
+  // private delay(ms: number): Promise<void> {
+  //   return new Promise((resolve) => setTimeout(resolve, ms));
+  // }
 
   private async get<T>(url: string): Promise<Result<T>> {
     try {
@@ -100,7 +100,7 @@ export class EdgarManager {
     const filtered: SECFilingRecord[] = [];
     for (let i = 0; i < filings.length; i++) {
       const form = filings[i].form;
-      // Ignoring ammendments (form === "13F-HR/A")
+      // Ignoring ammendments 13F-HR/A
       if (form === "13F-HR") {
         filtered.push(filings[i]);
       }
@@ -116,9 +116,15 @@ export class EdgarManager {
 
     try {
       const result = await this.parser.parseStringPromise(res.data);
+      const schemaVersion = result.edgarSubmission?.schemaVersion || '';
       const summary = result.edgarSubmission.formData[0].summaryPage[0];
-      const totalValue = summary.tableValueTotal[0];
-      return { success: true, data: Number(totalValue) };
+      let totalValue = Number(summary.tableValueTotal[0]);
+      
+      if(schemaVersion != "X0202"){
+        totalValue *= 1000; // Convert to $$ for non-X0202
+      }
+
+      return { success: true, data: totalValue };
     } catch (err) {
       return {
         success: false,

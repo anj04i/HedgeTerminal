@@ -9,7 +9,7 @@ class FilingTable:
             {
                 "Fund": fund_name,
                 "Quarter": df["quarter"],
-                "AUM": df["value_usd"].apply(lambda x: f"${x:,.0f}"),
+                "AUM": df["value_usd"],
             }
         )
         st.dataframe(formatted_df, hide_index=True, use_container_width=True)

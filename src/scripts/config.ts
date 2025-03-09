@@ -9,10 +9,6 @@ export const funds: Fund[] = [
     name: "Berkshire Hathaway",
   },
   {
-    cik: "1067983",
-    name: "Renaissance Technologies",
-  },
-  {
     cik: "1336528",
     name: "Pershing Square Capital Management",
   },
