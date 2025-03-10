@@ -3,6 +3,7 @@ import { CIK } from './cik';
 export enum ErrorType {
   FETCH_ERROR = 'FETCH_ERROR',
   PARSE_ERROR = 'PARSE_ERROR',
+  NOT_FOUND = 'NOT_FOUND',
 }
 
 export type ErrorTypes = { type: ErrorType; error: Error };
@@ -104,4 +105,10 @@ export type Extract13FRecord = {
   filingDate: string;
   reportDate: string;
   totalValue: number;
+};
+
+export type SEC13FHolding = {
+  title: string;
+  class: string;
+  value: number;
 };
