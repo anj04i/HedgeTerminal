@@ -103,7 +103,7 @@ export type PopularHoldingsResponse = {
 // API Fetch Function
 export async function fetchApi<T>(endpoint: string): Promise<T> {
   try {
-    const response = await fetch(`http://localhost:3000${endpoint}`);
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API}${endpoint}`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
