@@ -13,8 +13,6 @@ import logger from './utils/logger';
 import { funds } from './scripts/config';
 import { CACHE_KEYS, cache } from './cache';
 
-console.log('Cache loaded:', cache ? 'YES' : 'NO');
-
 const app = new Hono();
 
 app.use('*', cors());
