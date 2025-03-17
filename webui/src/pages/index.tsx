@@ -144,9 +144,11 @@ export default function Home() {
                 INSTITUTIONAL PORTFOLIO ANALYTICS
               </p>
             </div>
-            <div className="flex items-center space-x-4">
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
+              {/* Fund selector */}
               <Select value={selectedFund} onValueChange={setSelectedFund}>
-                <SelectTrigger className="w-[240px] bg-zinc-900 border-zinc-900 text-white focus:ring-0 focus:ring-offset-0">
+                <SelectTrigger className="w-full sm:w-[240px] bg-zinc-900 border-zinc-900 text-white focus:ring-0 focus:ring-offset-0">
                   <SelectValue placeholder="Select fund" />
                 </SelectTrigger>
                 <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
@@ -162,6 +164,7 @@ export default function Home() {
                 </SelectContent>
               </Select>
 
+              {/* Navigation - Desktop buttons */}
               <div className="hidden md:flex space-x-3">
                 <Button
                   variant={view === 'performance' ? 'default' : 'outline'}
@@ -187,11 +190,12 @@ export default function Home() {
                 </Button>
               </div>
 
+              {/* View selector dropdown - Works on both mobile and desktop */}
               <Select
                 value={view}
                 onValueChange={(value) => setView(value as any)}
               >
-                <SelectTrigger className="w-[120px] bg-zinc-900 border-zinc-900 text-white focus:ring-0 focus:ring-offset-0">
+                <SelectTrigger className="w-full sm:w-[120px] bg-zinc-900 border-zinc-900 text-white focus:ring-0 focus:ring-offset-0">
                   <SelectValue placeholder="View" />
                 </SelectTrigger>
                 <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
@@ -233,79 +237,18 @@ export default function Home() {
                   </SelectItem>
                 </SelectContent>
               </Select>
-              <div className="hidden md:flex space-x-3">
-                <Button
-                  variant={view === 'performance' ? 'default' : 'outline'}
-                  onClick={() => setView('performance')}
-                  className={
-                    view === 'performance'
-                      ? 'bg-white text-black hover:bg-zinc-200 hover:text-black'
-                      : 'bg-transparent border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 hover:border-zinc-700'
-                  }
-                >
-                  Performance
-                </Button>
-                <Button
-                  variant={view === 'history' ? 'default' : 'outline'}
-                  onClick={() => setView('history')}
-                  className={
-                    view === 'history'
-                      ? 'bg-white text-black hover:bg-zinc-200 hover:text-black'
-                      : 'bg-transparent border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 hover:border-zinc-700'
-                  }
-                >
-                  History
-                </Button>
-                <Select
-                  value={
-                    view === 'lastBuys' ||
-                    view === 'sectorDistribution' ||
-                    view === 'topHoldings' ||
-                    view === 'popular'
-                      ? view
-                      : ''
-                  }
-                  onValueChange={(value) => setView(value as any)}
-                >
-                  <SelectTrigger className="w-[120px] bg-zinc-900 border-zinc-900 text-white focus:ring-0 focus:ring-offset-0">
-                    <SelectValue placeholder="More" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
-                    <SelectItem
-                      value="lastBuys"
-                      className="hover:bg-zinc-800 text-zinc-300"
-                    >
-                      Last Buys
-                    </SelectItem>
-                    <SelectItem
-                      value="sectorDistribution"
-                      className="hover:bg-zinc-800 text-zinc-300"
-                    >
-                      Sector Distribution
-                    </SelectItem>
-                    <SelectItem
-                      value="topHoldings"
-                      className="hover:bg-zinc-800 text-zinc-300"
-                    >
-                      Top Holdings
-                    </SelectItem>
-                    <SelectItem
-                      value="popular"
-                      className="hover:bg-zinc-800 text-zinc-300"
-                    >
-                      Popular
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
           </div>
+
           {filings.length > 0 && (
-            <div className="flex flex-wrap gap-8 mt-6 pb-2">
-              <div className="flex items-center">
-                <DollarSign size={14} className="text-zinc-500 mr-1" />
+            <div className="flex flex-wrap gap-4 mt-6 pb-2">
+              <div className="flex items-center min-w-[45%] sm:min-w-0">
+                <DollarSign
+                  size={14}
+                  className="text-zinc-500 mr-1 flex-shrink-0"
+                />
                 <span className="text-xs text-zinc-500 mr-2">AUM</span>
-                <span className="text-lg font-bold">
+                <span className="text-lg font-bold whitespace-nowrap">
                   ${(Number(stats.aum) / 1000000000).toFixed(2)}B
                 </span>
                 <div
@@ -320,13 +263,19 @@ export default function Home() {
                   {stats.qoq_change}%
                 </div>
               </div>
-              <div className="flex items-center">
-                <TrendingUp size={14} className="text-zinc-500 mr-1" />
+              <div className="flex items-center min-w-[45%] sm:min-w-0">
+                <TrendingUp
+                  size={14}
+                  className="text-zinc-500 mr-1 flex-shrink-0"
+                />
                 <span className="text-xs text-zinc-500 mr-2">VOLATILITY</span>
                 <span className="text-lg font-bold">{stats.volatility}%</span>
               </div>
-              <div className="flex items-center">
-                <ArrowUpRight size={14} className="text-zinc-500 mr-1" />
+              <div className="flex items-center min-w-[45%] sm:min-w-0">
+                <ArrowUpRight
+                  size={14}
+                  className="text-zinc-500 mr-1 flex-shrink-0"
+                />
                 <span className="text-xs text-zinc-500 mr-2">YOY</span>
                 <span className="text-lg font-bold">
                   {stats.yoy_growth !== 'N/A'
@@ -334,7 +283,7 @@ export default function Home() {
                     : 'N/A'}
                 </span>
               </div>
-              <div className="flex items-center">
+              <div className="flex items-center min-w-[45%] sm:min-w-0">
                 <span className="text-xs text-zinc-500 mr-2">LATEST</span>
                 <span className="text-lg font-bold">{stats.quarter}</span>
               </div>
