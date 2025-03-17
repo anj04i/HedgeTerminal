@@ -161,6 +161,78 @@ export default function Home() {
                   ))}
                 </SelectContent>
               </Select>
+
+              <div className="hidden md:flex space-x-3">
+                <Button
+                  variant={view === 'performance' ? 'default' : 'outline'}
+                  onClick={() => setView('performance')}
+                  className={
+                    view === 'performance'
+                      ? 'bg-white text-black hover:bg-zinc-200 hover:text-black'
+                      : 'bg-transparent border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 hover:border-zinc-700'
+                  }
+                >
+                  Performance
+                </Button>
+                <Button
+                  variant={view === 'history' ? 'default' : 'outline'}
+                  onClick={() => setView('history')}
+                  className={
+                    view === 'history'
+                      ? 'bg-white text-black hover:bg-zinc-200 hover:text-black'
+                      : 'bg-transparent border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 hover:border-zinc-700'
+                  }
+                >
+                  History
+                </Button>
+              </div>
+
+              <Select
+                value={view}
+                onValueChange={(value) => setView(value as any)}
+              >
+                <SelectTrigger className="w-[120px] bg-zinc-900 border-zinc-900 text-white focus:ring-0 focus:ring-offset-0">
+                  <SelectValue placeholder="View" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                  <SelectItem
+                    value="performance"
+                    className="hover:bg-zinc-800 text-zinc-300 md:hidden"
+                  >
+                    Performance
+                  </SelectItem>
+                  <SelectItem
+                    value="history"
+                    className="hover:bg-zinc-800 text-zinc-300 md:hidden"
+                  >
+                    History
+                  </SelectItem>
+                  <SelectItem
+                    value="lastBuys"
+                    className="hover:bg-zinc-800 text-zinc-300"
+                  >
+                    Last Buys
+                  </SelectItem>
+                  <SelectItem
+                    value="sectorDistribution"
+                    className="hover:bg-zinc-800 text-zinc-300"
+                  >
+                    Sector Distribution
+                  </SelectItem>
+                  <SelectItem
+                    value="topHoldings"
+                    className="hover:bg-zinc-800 text-zinc-300"
+                  >
+                    Top Holdings
+                  </SelectItem>
+                  <SelectItem
+                    value="popular"
+                    className="hover:bg-zinc-800 text-zinc-300"
+                  >
+                    Popular
+                  </SelectItem>
+                </SelectContent>
+              </Select>
               <div className="hidden md:flex space-x-3">
                 <Button
                   variant={view === 'performance' ? 'default' : 'outline'}
