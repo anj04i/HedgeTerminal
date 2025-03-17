@@ -11,6 +11,9 @@ import {
 } from './db';
 import logger from './utils/logger';
 import { funds } from './scripts/config';
+import { CACHE_KEYS, cache } from './cache';
+
+console.log('Cache loaded:', cache ? 'YES' : 'NO');
 
 const app = new Hono();
 
@@ -39,7 +42,22 @@ app.get('/api/funds/:identifier/filings', async (c) => {
       return c.json({ error: 'Fund identifier is required' }, 400);
     }
 
-    const filings = await getFundFilings(identifier);
+    const cacheKey = CACHE_KEYS.fundFilings(identifier);
+    let filings = await cache.get(cacheKey);
+
+    if (!filings) {
+      logger.info(`Cache miss for ${cacheKey}, fetching from database`);
+      filings = await getFundFilings(identifier);
+
+      if (filings.length) {
+        await cache.set(cacheKey, filings);
+        logger.info(
+          `Stored ${filings.length} filings in cache for ${identifier}`,
+        );
+      }
+    } else {
+      logger.info(`Cache hit for ${cacheKey}, returning cached data`);
+    }
 
     if (!filings.length) {
       logger.info(`No filings found for fund: ${identifier}`);
@@ -78,8 +96,24 @@ app.get('/api/funds/:identifier/stats', async (c) => {
   logger.info(`Stats requested for fund: ${identifier}`);
   try {
     if (!identifier) return c.json({ error: 'Fund identifier required' }, 400);
-    const stats = await getFundStats(identifier);
+
+    const cacheKey = CACHE_KEYS.fundStats(identifier);
+    let stats = await cache.get(cacheKey);
+
+    if (!stats) {
+      logger.info(`Cache miss for ${cacheKey}, fetching from database`);
+      stats = await getFundStats(identifier);
+
+      if (stats) {
+        await cache.set(cacheKey, stats);
+        logger.info(`Stored stats in cache for ${identifier}`);
+      }
+    } else {
+      logger.info(`Cache hit for ${cacheKey}, returning cached data`);
+    }
+
     if (!stats) return c.json({ message: 'No filings found', stats: {} }, 404);
+
     return c.json({ message: 'Stats retrieved', stats }, 200);
   } catch (error) {
     logger.error(`Error fetching stats for ${identifier}: ${error}`);
@@ -92,7 +126,20 @@ app.get('/api/funds/:identifier/volatility', async (c) => {
   logger.info(`Volatility requested for fund: ${identifier}`);
   try {
     if (!identifier) return c.json({ error: 'Fund identifier required' }, 400);
-    const volatility = await getFundVolatility(identifier);
+
+    const cacheKey = CACHE_KEYS.fundVolatility(identifier);
+    let volatility = await cache.get(cacheKey);
+
+    if (!volatility) {
+      logger.info(`Cache miss for ${cacheKey}, fetching from database`);
+      volatility = await getFundVolatility(identifier);
+
+      await cache.set(cacheKey, volatility);
+      logger.info(`Stored volatility in cache for ${identifier}`);
+    } else {
+      logger.info(`Cache hit for ${cacheKey}, returning cached data`);
+    }
+
     return c.json({ message: 'Volatility retrieved', volatility }, 200);
   } catch (error) {
     logger.error(`Error fetching volatility for ${identifier}: ${error}`);
@@ -106,11 +153,29 @@ app.get('/api/funds/:identifier/purchases', async (c) => {
 
   try {
     if (!identifier) return c.json({ error: 'Fund identifier required' }, 400);
-    const purchases = await getFundPurchases(identifier);
+
+    const cacheKey = CACHE_KEYS.fundPurchases(identifier);
+    let purchases = await cache.get(cacheKey);
+
+    if (!purchases) {
+      logger.info(`Cache miss for ${cacheKey}, fetching from database`);
+      purchases = await getFundPurchases(identifier);
+
+      if (purchases.length) {
+        await cache.set(cacheKey, purchases);
+        logger.info(
+          `Stored ${purchases.length} purchases in cache for ${identifier}`,
+        );
+      }
+    } else {
+      logger.info(`Cache hit for ${cacheKey}, returning cached data`);
+    }
+
     if (!purchases.length) {
       logger.info(`No purchases found for ${identifier}`);
       return c.json({ message: 'No purchases found', purchases: [] }, 404);
     }
+
     logger.info(
       `Successfully retrieved ${purchases.length} purchases for ${identifier}`,
     );
@@ -127,7 +192,22 @@ app.get('/api/funds/:identifier/class-distribution', async (c) => {
 
   try {
     if (!identifier) return c.json({ error: 'Fund identifier required' }, 400);
-    const distribution = await getFundClassDistribution(identifier);
+
+    const cacheKey = CACHE_KEYS.fundClassDistribution(identifier);
+    let distribution = await cache.get(cacheKey);
+
+    if (!distribution) {
+      logger.info(`Cache miss for ${cacheKey}, fetching from database`);
+      distribution = await getFundClassDistribution(identifier);
+
+      if (distribution.length) {
+        await cache.set(cacheKey, distribution);
+        logger.info(`Stored class distribution in cache for ${identifier}`);
+      }
+    } else {
+      logger.info(`Cache hit for ${cacheKey}, returning cached data`);
+    }
+
     if (!distribution.length) {
       logger.info(`No class distribution found for ${identifier}`);
       return c.json(
@@ -135,6 +215,7 @@ app.get('/api/funds/:identifier/class-distribution', async (c) => {
         404,
       );
     }
+
     logger.info(`Successfully retrieved class distribution for ${identifier}`);
     return c.json(
       { message: 'Class distribution retrieved', distribution },
@@ -157,11 +238,29 @@ app.get('/api/funds/:identifier/top-holdings', async (c) => {
 
   try {
     if (!identifier) return c.json({ error: 'Fund identifier required' }, 400);
-    const holdings = await getFundTopHoldings(identifier, limit);
+
+    const cacheKey = CACHE_KEYS.fundTopHoldings(identifier, limit);
+    let holdings = await cache.get(cacheKey);
+
+    if (!holdings) {
+      logger.info(`Cache miss for ${cacheKey}, fetching from database`);
+      holdings = await getFundTopHoldings(identifier, limit);
+
+      if (holdings.length) {
+        await cache.set(cacheKey, holdings);
+        logger.info(
+          `Stored ${holdings.length} top holdings in cache for ${identifier}`,
+        );
+      }
+    } else {
+      logger.info(`Cache hit for ${cacheKey}, returning cached data`);
+    }
+
     if (!holdings.length) {
       logger.info(`No top holdings found for ${identifier}`);
       return c.json({ message: 'No top holdings found', holdings: [] }, 404);
     }
+
     logger.info(
       `Successfully retrieved ${holdings.length} top holdings for ${identifier}`,
     );
@@ -177,7 +276,21 @@ app.get('/api/holdings/popular', async (c) => {
   logger.info(`Popular holdings requested with limit: ${limit}`);
 
   try {
-    const holdings = await getMostPopularHoldings(limit);
+    const cacheKey = CACHE_KEYS.popularHoldings(limit);
+    let holdings = await cache.get(cacheKey);
+
+    if (!holdings) {
+      logger.info(`Cache miss for ${cacheKey}, fetching from database`);
+      holdings = await getMostPopularHoldings(limit);
+
+      if (holdings.length) {
+        await cache.set(cacheKey, holdings);
+        logger.info(`Stored ${holdings.length} popular holdings in cache`);
+      }
+    } else {
+      logger.info(`Cache hit for ${cacheKey}, returning cached data`);
+    }
+
     if (!holdings.length) {
       logger.info('No popular holdings found');
       return c.json(
@@ -185,6 +298,7 @@ app.get('/api/holdings/popular', async (c) => {
         404,
       );
     }
+
     logger.info(`Successfully retrieved ${holdings.length} popular holdings`);
     return c.json({ message: 'Popular holdings retrieved', holdings }, 200);
   } catch (error) {
