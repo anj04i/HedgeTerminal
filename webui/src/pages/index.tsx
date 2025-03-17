@@ -130,7 +130,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <header className="border-b border-zinc-900 pt-6 pb-3 px-6 sticky top-0 bg-black/95 backdrop-blur-sm z-10">
+      <header className="border-b border-zinc-900 pt-6 pb-3 px-6 !static md:!sticky top-0 bg-black/95 backdrop-blur-sm z-10">
+        {' '}
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
             <div>
