@@ -11,9 +11,14 @@ import {
   SimilarFundsResponse,
 } from './types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API || '';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
-console.log(API_BASE_URL);
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API || '';
 
 export async function fetchApi<T>(endpoint: string): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`);
