@@ -1,27 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-
-import {
-  StatsResponse,
-  FundFiling,
-  VolatilityData,
-  Holding,
-  ClassDistribution,
-  CompleteMetrics,
-  SimilarFund,
-} from '@/lib/types';
-import {
-  fetchConfig,
-  fetchFundFilings,
-  fetchFundStats,
-  fetchFundVolatility,
-  fetchFundPurchases,
-  fetchFundClassDistribution,
-  fetchFundMetrics,
-  fetchSimilarFunds,
-} from '@/lib/utils';
-
-// Import Components
-import { config } from '@/components/dashboard/config';
+import { useState, useEffect } from 'react';
+import { apiConfig, config, fundMap } from '@/components/dashboard/config';
 import AdvancedMetrics from '@/components/dashboard/advancedMetrics';
 import AumChart from '@/components/dashboard/aumChart';
 import FundHeader from '@/components/dashboard/fundHeader';
@@ -31,179 +9,101 @@ import SectorDistribution from '@/components/dashboard/sectorDistribution';
 import SimilarFunds from '@/components/dashboard/similarFunds';
 import { Download, Search } from 'lucide-react';
 import {
-  Command,
   CommandInput,
   CommandList,
   CommandItem,
   CommandGroup,
   CommandDialog,
 } from '@/components/ui/command';
+import { useFundData } from '@/components/hooks/useFundData';
 
 export default function Dashboard() {
-  // State
-  const [funds, setFunds] = useState<Record<string, string>>({});
-  const [selectedFund, setSelectedFund] = useState('');
-  const [filings, setFilings] = useState<FundFiling[]>([]);
-  const [purchases, setPurchases] = useState<Holding[]>([]);
-  const [classDistribution, setClassDistribution] = useState<
-    ClassDistribution[]
-  >([]);
-  const [stats, setStats] = useState<StatsResponse['stats']>({
-    aum: 0,
-    quarter: '',
-    qoq_change: '0',
-    yoy_growth: 'N/A',
-    total_appreciation: '0',
-    volatility: '0',
-    max_growth: '0',
-    max_decline: '0',
-    growth_consistency: '0',
-  });
-  const [quarterlyChanges, setQuarterlyChanges] = useState<VolatilityData[]>(
-    [],
-  );
-  const [metrics, setMetrics] = useState<CompleteMetrics | null>(null);
-  const [similarFunds, setSimilarFunds] = useState<SimilarFund[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [funds] = useState(fundMap);
+  const [selectedFund, setSelectedFund] = useState(apiConfig.funds[0].name);
+  const [pendingFund, setPendingFund] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [fadeState, setFadeState] = useState('in');
-  const [prevFund, setPrevFund] = useState('');
+  const [open, setOpen] = useState(false);
 
-  // Fetch list of funds on initial load
+  const activeFund = pendingFund || selectedFund;
+  const cik = fundMap[activeFund];
+  const {
+    filings,
+    stats,
+    quarterlyChanges,
+    purchases,
+    classDistribution,
+    metrics,
+    similarFunds,
+    isLoading,
+  } = useFundData(cik);
+
   useEffect(() => {
-    fetchConfig()
-      .then((data) => {
-        const fundMap = data.funds.reduce((acc: Record<string, string>, f) => {
-          acc[f.name] = f.cik;
-          return acc;
-        }, {});
-        setFunds(fundMap);
-        if (data.funds.length > 0) setSelectedFund(data.funds[0].name);
-      })
-      .catch((err) => console.error('Error fetching config:', err));
-  }, []);
+    if (!isLoading && pendingFund) {
+      setSelectedFund(pendingFund);
+      setPendingFund(null);
+    }
+  }, [isLoading, pendingFund]);
 
-  // Handle fund selection change with smooth transition
   const handleFundChange = (newFund: string) => {
-    if (newFund === selectedFund) return;
-
-    setPrevFund(selectedFund);
-    // Start fade out transition
-    setFadeState('out');
-
-    // After fade out completes, change the fund and begin loading new data
-    setTimeout(() => {
-      setSelectedFund(newFund);
-      setSearchTerm('');
-    }, 300); // Match this timing with your CSS transition duration
+    if (newFund === selectedFund || newFund === pendingFund) return;
+    setPendingFund(newFund);
+    setSearchTerm('');
   };
 
-  // Fetch fund data when selection changes
-  useEffect(() => {
-    if (!selectedFund || !funds[selectedFund]) return;
+  const handleExportJSON = () => {
+    if (!selectedFund || !filings.length || !metrics) return;
 
-    setIsLoading(true);
-    const cik = funds[selectedFund];
-
-    Promise.all([
-      // Use dedicated fetch functions instead of generic fetchApi
-      fetchFundFilings(cik).then((data) =>
-        setFilings(
-          data.filings.map((f) => ({
-            quarter: f.quarter,
-            value_usd: Number(f.value_usd),
-          })),
-        ),
-      ),
-      fetchFundStats(cik).then((data) => setStats(data.stats)),
-      fetchFundVolatility(cik).then((data) =>
-        setQuarterlyChanges(data.volatility),
-      ),
-      fetchFundPurchases(cik).then((data) => setPurchases(data.purchases)),
-      fetchFundClassDistribution(cik).then((data) =>
-        setClassDistribution(data.distribution),
-      ),
-      fetchFundMetrics(cik).then((data) => {
-        setMetrics(data.metrics);
-      }),
-      fetchSimilarFunds(cik).then((data) => {
-        setSimilarFunds(data.similar);
-      }),
-    ])
-      .then(() => {
-        setIsLoading(false);
-        // Start fade in transition when data is loaded
-        setFadeState('in');
-      })
-      .catch((err) => {
-        console.error('Error fetching data:', err);
-        setIsLoading(false);
-        // Even on error, we should transition back in
-        setFadeState('in');
-      });
-  }, [selectedFund, funds]);
-
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (
-        (e.key === 'k' && (e.metaKey || e.ctrlKey)) || // ⌘K or Ctrl+K
-        (e.key === '/' && document.activeElement?.tagName !== 'INPUT')
-      ) {
-        e.preventDefault();
-        setOpen((prev) => !prev);
-      }
+    const data = {
+      filings,
+      stats,
+      volatility: quarterlyChanges,
+      purchases,
+      classDistribution,
+      metrics,
+      similarFunds,
     };
 
-    document.addEventListener('keydown', down);
-    return () => document.removeEventListener('keydown', down);
-  }, []);
-
-  // Export data as CSV
-  const handleExportCSV = () => {
-    if (filings.length === 0) return;
-    let csvContent = 'Fund,Quarter,AUM,Change (QoQ)\n';
-    for (let i = 0; i < filings.length; i++) {
-      const f = filings[i];
-      let qoqChange = 'N/A';
-      if (i > 0) {
-        const prevFiling = filings[i - 1];
-        qoqChange = ((f.value_usd / prevFiling.value_usd - 1) * 100).toFixed(2);
-      }
-      csvContent += `${selectedFund},${f.quarter},${f.value_usd},${qoqChange}\n`;
-    }
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: 'application/json',
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${selectedFund.replace(/\s+/g, '_')}_filings.csv`;
+    link.download = `${selectedFund.replace(/\s+/g, '_')}_data.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
 
-  // Define transition classes based on fade state
-  const fadeClass =
-    fadeState === 'in'
-      ? 'opacity-100 transition-opacity duration-300 ease-in'
-      : 'opacity-0 transition-opacity duration-300 ease-out';
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (
+        (e.key === 'k' && (e.metaKey || e.ctrlKey)) ||
+        (e.key === '/' && document.activeElement?.tagName !== 'INPUT')
+      ) {
+        e.preventDefault();
+        setOpen((prev) => !prev);
+      }
+    };
+    document.addEventListener('keydown', down);
+    return () => document.removeEventListener('keydown', down);
+  }, []);
+
+  const fundName = pendingFund ? selectedFund : activeFund;
+  const showData = filings.length > 0;
 
   return (
     <div className={`font-sans ${config.bgBase} min-h-screen`}>
-      {/* Header */}
       <div
         className={`${config.bgCard} border-b ${config.borderBase} p-4 flex flex-col sm:flex-row items-center justify-between gap-4 relative`}
       >
-        {/* left side */}
         <div
           className={`font-bold text-xl ${config.textSecondary} mb-3 sm:mb-0`}
         >
           13F INSIGHTS
         </div>
 
-        {/* center search trigger - positioned relative on mobile, absolute on desktop */}
         <div className="w-full sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:max-w-md">
           <button
             onClick={() => setOpen(true)}
@@ -219,16 +119,14 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {/* right side export button - hidden on mobile */}
         <button
           className={`hidden sm:flex items-center px-4 py-2 ${config.bgCard} border ${config.borderBase} ${config.textSecondary} rounded-md transition-colors`}
-          onClick={handleExportCSV}
+          onClick={handleExportJSON}
         >
           <Download className="mr-2 h-4 w-4" />
           <span className="whitespace-nowrap">Export</span>
         </button>
 
-        {/* command palette */}
         <CommandDialog open={open} onOpenChange={setOpen}>
           <CommandInput
             placeholder="Search for a fund..."
@@ -258,56 +156,25 @@ export default function Dashboard() {
         </CommandDialog>
       </div>
 
-      {/* Content Section with Fade Transitions */}
-      <div className={fadeClass}>
-        {/* Fund Header with Stats */}
-        {selectedFund && !isLoading ? (
-          <FundHeader fundName={selectedFund} stats={stats} metrics={metrics} />
-        ) : selectedFund && isLoading ? (
-          <div
-            className={`${config.bgCard} border-b ${config.borderBase} px-6 py-4 mb-6 opacity-40`}
-          >
-            {/* Keep showing previous fund during transition */}
-            <FundHeader
-              fundName={prevFund || selectedFund}
-              stats={stats}
-              metrics={metrics}
-            />
-          </div>
-        ) : (
-          <div
-            className={`${config.bgCard} border-b ${config.borderBase} px-6 py-4 mb-6`}
-          >
-            <div className="text-center py-4">
-              <h3 className={`text-xl font-bold mb-2 ${config.textSecondary}`}>
-                Select a Fund
-              </h3>
-              <p className={`${config.textMuted}`}>
-                Choose an institutional investment fund to view their 13F filing
-                history and performance metrics
-              </p>
-            </div>
-          </div>
-        )}
+      <div
+        className={`${isLoading ? 'opacity-40 pointer-events-none' : 'opacity-100'} transition-opacity duration-150`}
+      >
+        <FundHeader fundName={fundName} stats={stats} metrics={metrics} />
 
-        {/* Main Content */}
-        {selectedFund && !isLoading && filings.length > 0 && (
+        {showData && (
           <>
-            {/* Charts Section */}
             <div className="px-6 pb-6 space-y-6">
               <AumChart filings={filings} stats={stats} />
               <QuarterlyPerformance quarterlyChanges={quarterlyChanges} />
               {metrics && <AdvancedMetrics metrics={metrics} />}
             </div>
 
-            {/* Two Column Layout */}
             <div className="px-6 pb-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6">
               <SectorDistribution classDistribution={classDistribution} />
               <RecentPurchases purchases={purchases} />
             </div>
 
-            {/* Additional Metrics */}
-            <div className="px-6 pb-6 grid grid-cols-1 md:grid-cols-1 gap-6">
+            <div className="px-6 pb-6 grid grid-cols-1 gap-6">
               {similarFunds.length > 0 && (
                 <SimilarFunds
                   similarFunds={similarFunds}
@@ -318,34 +185,7 @@ export default function Dashboard() {
           </>
         )}
 
-        {/* Show faded previous data during loading */}
-        {selectedFund && isLoading && prevFund && (
-          <div className="opacity-40 transition-opacity duration-300">
-            {/* Use previous data during loading */}
-            <div className="px-6 pb-6 space-y-6">
-              <AumChart filings={filings} stats={stats} />
-              <QuarterlyPerformance quarterlyChanges={quarterlyChanges} />
-              {metrics && <AdvancedMetrics metrics={metrics} />}
-            </div>
-
-            <div className="px-6 pb-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6">
-              <SectorDistribution classDistribution={classDistribution} />
-              <RecentPurchases purchases={purchases} />
-            </div>
-
-            {similarFunds.length > 0 && (
-              <div className="px-6 pb-6 grid grid-cols-1 md:grid-cols-1 gap-6">
-                <SimilarFunds
-                  similarFunds={similarFunds}
-                  setSelectedFund={handleFundChange}
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* When no previous data is available, show minimal loading skeleton */}
-        {selectedFund && isLoading && !prevFund && (
+        {!showData && isLoading && (
           <div className="px-6 pb-6 space-y-6">
             <div className="h-64 bg-gray-100 animate-pulse rounded-md"></div>
             <div className="h-64 bg-gray-100 animate-pulse rounded-md"></div>
@@ -356,7 +196,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Footer */}
         <footer
           className={`border-t ${config.borderBase} py-6 mt-10 text-center text-xs ${config.textMuted}`}
         >

@@ -9,6 +9,7 @@ import {
   PopularHoldingsResponse,
   MetricsResponse,
   SimilarFundsResponse,
+  FullFundResponse,
 } from './types';
 
 import { clsx, type ClassValue } from 'clsx';
@@ -92,6 +93,13 @@ export async function fetchTopPerformingFunds(
 
 export async function fetchMostUniqueFunds(limit: number = 10): Promise<any> {
   return fetchApi<any>(`/api/funds/most-unique?limit=${limit}`);
+}
+
+export async function fetchAllFundData(
+  cik: string,
+): Promise<FullFundResponse['data']> {
+  const res = await fetchApi<FullFundResponse>(`/api/funds/${cik}/all`);
+  return res.data;
 }
 
 // Format currency for display

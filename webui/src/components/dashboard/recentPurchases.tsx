@@ -81,4 +81,4 @@ const RecentPurchases: React.FC<RecentPurchasesProps> = ({ purchases }) => {
   );
 };
 
-export default RecentPurchases;
+export default React.memo(RecentPurchases);

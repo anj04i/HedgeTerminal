@@ -191,4 +191,4 @@ const AdvancedMetrics: React.FC<AdvancedMetricsProps> = ({ metrics }) => {
   );
 };
 
-export default AdvancedMetrics;
+export default React.memo(AdvancedMetrics);

@@ -480,4 +480,63 @@ app.post('/api/admin/refresh-metrics', async (c) => {
   }
 });
 
+app.get('/api/funds/:cik/all', async (c) => {
+  const cik = c.req.param('cik');
+  logger.info(`Full fund payload requested for CIK: ${cik}`);
+
+  if (!cik || !/^\d+$/.test(cik)) {
+    return c.json({ error: 'Valid CIK is required' }, 400);
+  }
+
+  const cacheKey = CACHE_KEYS.fundAll
+    ? CACHE_KEYS.fundAll(cik)
+    : `fund:${cik}:all`;
+  let data = await cache.get(cacheKey);
+
+  if (!data) {
+    try {
+      const [
+        filings,
+        stats,
+        volatility,
+        purchases,
+        classDistribution,
+        metrics,
+        similarFunds,
+      ] = await Promise.all([
+        getFundFilings(cik),
+        getFundStats(cik),
+        getFundVolatility(cik),
+        getFundPurchases(cik),
+        getFundClassDistribution(cik),
+        getFundCompleteMetrics(cik),
+        getSimilarFunds(cik),
+      ]);
+
+      data = {
+        filings,
+        stats,
+        volatility,
+        purchases,
+        classDistribution,
+        metrics,
+        similarFunds,
+      };
+
+      await cache.set(cacheKey, data);
+      logger.info(`Cached full fund payload for CIK: ${cik}`);
+    } catch (err) {
+      logger.error(`Error building full fund payload for ${cik}: ${err}`);
+      return c.json(
+        { error: 'Internal server error while fetching full fund data' },
+        500,
+      );
+    }
+  } else {
+    logger.info(`Cache hit for full fund payload: ${cik}`);
+  }
+
+  return c.json({ message: 'Full fund data retrieved', data }, 200);
+});
+
 export default app;

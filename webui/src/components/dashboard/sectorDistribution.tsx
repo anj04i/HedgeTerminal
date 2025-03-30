@@ -112,4 +112,4 @@ const SectorDistribution: React.FC<SectorDistributionProps> = ({
   );
 };
 
-export default SectorDistribution;
+export default React.memo(SectorDistribution);

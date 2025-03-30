@@ -83,4 +83,4 @@ const SimilarFunds: React.FC<SimilarFundsProps> = ({
   );
 };
 
-export default SimilarFunds;
+export default React.memo(SimilarFunds);

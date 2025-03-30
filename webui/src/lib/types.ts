@@ -119,3 +119,16 @@ export interface PopularHoldingsResponse {
   message: string;
   holdings: Holding[];
 }
+
+export interface FullFundResponse {
+  message: string;
+  data: {
+    filings: FundFiling[];
+    stats: StatsResponse['stats'];
+    volatility: VolatilityData[];
+    purchases: Holding[];
+    classDistribution: ClassDistribution[];
+    metrics: CompleteMetrics;
+    similarFunds: SimilarFund[];
+  };
+}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   AreaChart,
   Area,
@@ -22,11 +22,12 @@ interface ChartData {
 }
 
 const AumChart: React.FC<AumChartProps> = ({ filings, stats }) => {
-  // Format AUM data for charts
-  const chartData: ChartData[] = filings.map((filing) => ({
-    quarter: filing.quarter,
-    value: Number((filing.value_usd / 1000000000).toFixed(2)),
-  }));
+  const chartData: ChartData[] = useMemo(() => {
+    return filings.map((filing) => ({
+      quarter: filing.quarter,
+      value: Number((filing.value_usd / 1e9).toFixed(2)),
+    }));
+  }, [filings]);
 
   if (chartData.length === 0) return null;
 

@@ -83,4 +83,4 @@ const QuarterlyPerformance: React.FC<QuarterlyPerformanceProps> = ({
   );
 };
 
-export default QuarterlyPerformance;
+export default React.memo(QuarterlyPerformance);

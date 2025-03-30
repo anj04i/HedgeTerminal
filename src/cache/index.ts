@@ -16,6 +16,7 @@ export const CACHE_KEYS = {
   similarFunds: (cik: string, limit: number) => `fund:${cik}:similar:${limit}`,
   topPerformingFunds: (limit: number) => `funds:top-performing:${limit}`,
   mostUniqueFunds: (limit: number) => `funds:most-unique:${limit}`,
+  fundAll: (cik: string) => `fund:${cik}:all`,
 };
 
 const REDIS_URL = Bun.env.REDIS_URL || process.env.REDIS_URL;
