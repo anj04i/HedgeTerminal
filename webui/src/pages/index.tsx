@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 import {
   StatsResponse,
@@ -30,6 +30,14 @@ import RecentPurchases from '@/components/dashboard/recentPurchases';
 import SectorDistribution from '@/components/dashboard/sectorDistribution';
 import SimilarFunds from '@/components/dashboard/similarFunds';
 import { Download, Search } from 'lucide-react';
+import {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandItem,
+  CommandGroup,
+  CommandDialog,
+} from '@/components/ui/command';
 
 export default function Dashboard() {
   // State
@@ -59,6 +67,8 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [fadeState, setFadeState] = useState('in');
+  const [prevFund, setPrevFund] = useState('');
 
   // Fetch list of funds on initial load
   useEffect(() => {
@@ -73,6 +83,21 @@ export default function Dashboard() {
       })
       .catch((err) => console.error('Error fetching config:', err));
   }, []);
+
+  // Handle fund selection change with smooth transition
+  const handleFundChange = (newFund: string) => {
+    if (newFund === selectedFund) return;
+
+    setPrevFund(selectedFund);
+    // Start fade out transition
+    setFadeState('out');
+
+    // After fade out completes, change the fund and begin loading new data
+    setTimeout(() => {
+      setSelectedFund(newFund);
+      setSearchTerm('');
+    }, 300); // Match this timing with your CSS transition duration
+  };
 
   // Fetch fund data when selection changes
   useEffect(() => {
@@ -108,12 +133,32 @@ export default function Dashboard() {
     ])
       .then(() => {
         setIsLoading(false);
+        // Start fade in transition when data is loaded
+        setFadeState('in');
       })
       .catch((err) => {
         console.error('Error fetching data:', err);
         setIsLoading(false);
+        // Even on error, we should transition back in
+        setFadeState('in');
       });
   }, [selectedFund, funds]);
+
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (
+        (e.key === 'k' && (e.metaKey || e.ctrlKey)) || // ⌘K or Ctrl+K
+        (e.key === '/' && document.activeElement?.tagName !== 'INPUT')
+      ) {
+        e.preventDefault();
+        setOpen((prev) => !prev);
+      }
+    };
+
+    document.addEventListener('keydown', down);
+    return () => document.removeEventListener('keydown', down);
+  }, []);
 
   // Export data as CSV
   const handleExportCSV = () => {
@@ -139,59 +184,42 @@ export default function Dashboard() {
     URL.revokeObjectURL(url);
   };
 
+  // Define transition classes based on fade state
+  const fadeClass =
+    fadeState === 'in'
+      ? 'opacity-100 transition-opacity duration-300 ease-in'
+      : 'opacity-0 transition-opacity duration-300 ease-out';
+
   return (
     <div className={`font-sans ${config.bgBase} min-h-screen`}>
       {/* Header */}
       <div
-        className={`${config.bgCard} border-b ${config.borderBase} p-4 flex items-center justify-between`}
+        className={`${config.bgCard} border-b ${config.borderBase} p-4 flex items-center justify-between relative`}
       >
+        {/* left side */}
         <div className={`font-bold text-xl ${config.textSecondary}`}>
           13F INSIGHTS
         </div>
 
-        <div className="flex-1 max-w-xl mx-8 relative">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 z-10">
-            <Search className="h-4 w-4 text-gray-500" />
-          </div>
-          <input
-            type="text"
-            placeholder="Search for a fund..."
-            className="w-full pl-10 py-2 bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-            }}
-            onFocus={() => setIsSearchFocused(true)}
-            onBlur={() => {
-              setTimeout(() => setIsSearchFocused(false), 200);
-            }}
-          />
-          {isSearchFocused && (
-            <div className="absolute w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-20 max-h-64 overflow-y-auto">
-              {Object.keys(funds)
-                .filter(
-                  (fund) =>
-                    !searchTerm ||
-                    fund.toLowerCase().includes(searchTerm.toLowerCase()),
-                )
-                .map((fund) => (
-                  <div
-                    key={fund}
-                    className={`px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm text-black ${
-                      fund === selectedFund ? 'bg-blue-50 font-medium' : ''
-                    }`}
-                    onClick={() => {
-                      setSelectedFund(fund);
-                      setSearchTerm('');
-                    }}
-                  >
-                    {fund}
-                  </div>
-                ))}
-            </div>
-          )}
+        {/* center search trigger */}
+        <div className="absolute left-1/2 -translate-x-1/2 w-full max-w-md">
+          <button
+            onClick={() => setOpen(true)}
+            className="w-full flex items-center justify-between px-3 py-1.5 text-sm border rounded-md bg-white text-gray-600 hover:bg-gray-50 border-gray-300 shadow-sm"
+          >
+            <span className="flex items-center gap-2">
+              <Search className="w-4 h-4 text-gray-500" />
+              <span className="hidden sm:inline text-gray-500">
+                Search funds...
+              </span>
+            </span>
+            <kbd className="text-xs text-gray-500 border border-gray-300 bg-gray-100 px-1.5 py-0.5 rounded">
+              ⌘K
+            </kbd>
+          </button>
         </div>
 
+        {/* right side export button */}
         <button
           className={`flex items-center px-4 py-2 ${config.bgCard} border ${config.borderBase} ${config.textSecondary} rounded-md transition-colors`}
           onClick={handleExportCSV}
@@ -199,80 +227,147 @@ export default function Dashboard() {
           <Download className="mr-2 h-4 w-4" />
           Export
         </button>
+
+        {/* command palette */}
+        <CommandDialog open={open} onOpenChange={setOpen}>
+          <CommandInput
+            placeholder="Search for a fund..."
+            value={searchTerm}
+            onValueChange={setSearchTerm}
+          />
+          <CommandList>
+            <CommandGroup heading="Funds">
+              {Object.keys(funds)
+                .filter((fund) =>
+                  fund.toLowerCase().includes(searchTerm.toLowerCase()),
+                )
+                .map((fund) => (
+                  <CommandItem
+                    key={fund}
+                    value={fund}
+                    onSelect={() => {
+                      handleFundChange(fund);
+                      setOpen(false);
+                    }}
+                  >
+                    {fund}
+                  </CommandItem>
+                ))}
+            </CommandGroup>
+          </CommandList>
+        </CommandDialog>
       </div>
 
-      {/* Fund Header with Stats */}
-      {selectedFund && !isLoading ? (
-        <FundHeader fundName={selectedFund} stats={stats} metrics={metrics} />
-      ) : selectedFund && isLoading ? (
-        <div
-          className={`${config.bgCard} border-b ${config.borderBase} px-6 py-4 mb-6`}
-        >
-          <div className="text-center py-4">
-            <h3 className={`text-xl font-bold mb-2 ${config.textSecondary}`}>
-              Loading Data...
-            </h3>
-            <p className={`${config.textMuted}`}>
-              Retrieving 13F filing information for {selectedFund}
-            </p>
+      {/* Content Section with Fade Transitions */}
+      <div className={fadeClass}>
+        {/* Fund Header with Stats */}
+        {selectedFund && !isLoading ? (
+          <FundHeader fundName={selectedFund} stats={stats} metrics={metrics} />
+        ) : selectedFund && isLoading ? (
+          <div
+            className={`${config.bgCard} border-b ${config.borderBase} px-6 py-4 mb-6 opacity-40`}
+          >
+            {/* Keep showing previous fund during transition */}
+            <FundHeader
+              fundName={prevFund || selectedFund}
+              stats={stats}
+              metrics={metrics}
+            />
           </div>
-        </div>
-      ) : (
-        <div
-          className={`${config.bgCard} border-b ${config.borderBase} px-6 py-4 mb-6`}
-        >
-          <div className="text-center py-4">
-            <h3 className={`text-xl font-bold mb-2 ${config.textSecondary}`}>
-              Select a Fund
-            </h3>
-            <p className={`${config.textMuted}`}>
-              Choose an institutional investment fund to view their 13F filing
-              history and performance metrics
-            </p>
+        ) : (
+          <div
+            className={`${config.bgCard} border-b ${config.borderBase} px-6 py-4 mb-6`}
+          >
+            <div className="text-center py-4">
+              <h3 className={`text-xl font-bold mb-2 ${config.textSecondary}`}>
+                Select a Fund
+              </h3>
+              <p className={`${config.textMuted}`}>
+                Choose an institutional investment fund to view their 13F filing
+                history and performance metrics
+              </p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Main Content */}
-      {selectedFund && filings.length > 0 && (
-        <>
-          {/* Charts Section */}
-          <div className="px-6 pb-6 space-y-6">
-            <AumChart filings={filings} stats={stats} />
-            <QuarterlyPerformance quarterlyChanges={quarterlyChanges} />
-            {metrics && <AdvancedMetrics metrics={metrics} />}
-          </div>
+        {/* Main Content */}
+        {selectedFund && !isLoading && filings.length > 0 && (
+          <>
+            {/* Charts Section */}
+            <div className="px-6 pb-6 space-y-6">
+              <AumChart filings={filings} stats={stats} />
+              <QuarterlyPerformance quarterlyChanges={quarterlyChanges} />
+              {metrics && <AdvancedMetrics metrics={metrics} />}
+            </div>
 
-          {/* Two Column Layout */}
-          <div className="px-6 pb-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6">
-            <SectorDistribution classDistribution={classDistribution} />
-            <RecentPurchases purchases={purchases} />
-          </div>
+            {/* Two Column Layout */}
+            <div className="px-6 pb-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6">
+              <SectorDistribution classDistribution={classDistribution} />
+              <RecentPurchases purchases={purchases} />
+            </div>
 
-          {/* Additional Metrics */}
-          <div className="px-6 pb-6 grid grid-cols-1 md:grid-cols-1 gap-6">
-            {/* <KeyMetrics stats={stats} topHoldings={topHoldings} /> */}
+            {/* Additional Metrics */}
+            <div className="px-6 pb-6 grid grid-cols-1 md:grid-cols-1 gap-6">
+              {similarFunds.length > 0 && (
+                <SimilarFunds
+                  similarFunds={similarFunds}
+                  setSelectedFund={handleFundChange}
+                />
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Show faded previous data during loading */}
+        {selectedFund && isLoading && prevFund && (
+          <div className="opacity-40 transition-opacity duration-300">
+            {/* Use previous data during loading */}
+            <div className="px-6 pb-6 space-y-6">
+              <AumChart filings={filings} stats={stats} />
+              <QuarterlyPerformance quarterlyChanges={quarterlyChanges} />
+              {metrics && <AdvancedMetrics metrics={metrics} />}
+            </div>
+
+            <div className="px-6 pb-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6">
+              <SectorDistribution classDistribution={classDistribution} />
+              <RecentPurchases purchases={purchases} />
+            </div>
+
             {similarFunds.length > 0 && (
-              <SimilarFunds
-                similarFunds={similarFunds}
-                setSelectedFund={setSelectedFund}
-              />
+              <div className="px-6 pb-6 grid grid-cols-1 md:grid-cols-1 gap-6">
+                <SimilarFunds
+                  similarFunds={similarFunds}
+                  setSelectedFund={handleFundChange}
+                />
+              </div>
             )}
           </div>
-        </>
-      )}
+        )}
 
-      {/* Footer */}
-      <footer
-        className={`border-t ${config.borderBase} py-6 mt-10 text-center text-xs ${config.textMuted}`}
-      >
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex justify-between items-center">
-            <p>13F INSIGHTS • INSTITUTIONAL PORTFOLIO TRACKER</p>
-            <p>DATA UPDATED {stats.quarter || 'N/A'}</p>
+        {/* When no previous data is available, show minimal loading skeleton */}
+        {selectedFund && isLoading && !prevFund && (
+          <div className="px-6 pb-6 space-y-6">
+            <div className="h-64 bg-gray-100 animate-pulse rounded-md"></div>
+            <div className="h-64 bg-gray-100 animate-pulse rounded-md"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="h-48 bg-gray-100 animate-pulse rounded-md"></div>
+              <div className="h-48 bg-gray-100 animate-pulse rounded-md"></div>
+            </div>
           </div>
-        </div>
-      </footer>
+        )}
+
+        {/* Footer */}
+        <footer
+          className={`border-t ${config.borderBase} py-6 mt-10 text-center text-xs ${config.textMuted}`}
+        >
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="flex justify-between items-center">
+              <p>13F INSIGHTS • INSTITUTIONAL PORTFOLIO TRACKER</p>
+              <p>DATA UPDATED {stats.quarter || 'N/A'}</p>
+            </div>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }
