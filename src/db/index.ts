@@ -2,6 +2,13 @@ import { Extract13FRecord, SEC13FHolding } from '../lib/types';
 import logger from '../utils/logger';
 import { pool } from './config';
 
+function standardizeIdentifier(identifier: string) {
+  const isCIK = /^\d+$/.test(identifier);
+  const condition = isCIK ? 'cik = $1' : 'LOWER(name) LIKE LOWER($1)';
+  const param = isCIK ? identifier : `%${identifier}%`;
+  return { condition, param, isCIK };
+}
+
 export async function upsert13FRecords(
   cik: string,
   name: string,
@@ -38,14 +45,14 @@ export async function upsert13FRecords(
 
     if (valuesList.length > 0) {
       const query = `
-            INSERT INTO FILINGS (
-              cik, name, accession_number, filing_date, report_date, total_value
-            ) VALUES ${valuePlaceholders.join(', ')}
-            ON CONFLICT (cik, accession_number) DO UPDATE SET
-              name = EXCLUDED.name,
-              filing_date = EXCLUDED.filing_date,
-              report_date = EXCLUDED.report_date,
-              total_value = EXCLUDED.total_value`;
+              INSERT INTO FILINGS (
+                cik, name, accession_number, filing_date, report_date, total_value
+              ) VALUES ${valuePlaceholders.join(', ')}
+              ON CONFLICT (cik, accession_number) DO UPDATE SET
+                name = EXCLUDED.name,
+                filing_date = EXCLUDED.filing_date,
+                report_date = EXCLUDED.report_date,
+                total_value = EXCLUDED.total_value`;
 
       await client.query(query, valuesList);
     }
@@ -61,8 +68,8 @@ export async function upsert13FRecords(
 }
 
 export async function getFundFilings(identifier: string): Promise<any[]> {
+  const { condition, param } = standardizeIdentifier(identifier);
   logger.info(`Fetching filings for identifier: ${identifier}`);
-  const isCIK = /^\d+$/.test(identifier);
 
   const query = `
   SELECT
@@ -70,14 +77,12 @@ export async function getFundFilings(identifier: string): Promise<any[]> {
     CONCAT(EXTRACT(YEAR FROM report_date), '-', EXTRACT(QUARTER FROM report_date)) as quarter,
     ROUND(total_value::numeric, 2) as value_usd
   FROM FILINGS
-  WHERE ${isCIK ? 'cik = $1' : 'LOWER(name) LIKE LOWER($1)'}
+  WHERE ${condition}
   ORDER BY report_date
-`;
-
-  const params = [isCIK ? identifier : `%${identifier}%`];
+  `;
 
   try {
-    const result = await pool.query(query, params);
+    const result = await pool.query(query, [param]);
     logger.info(`Retrieved ${result.rows.length} filings for ${identifier}`);
     return result.rows;
   } catch (err) {
@@ -117,11 +122,11 @@ export async function upsertLatestBuys(
 
     if (valuesList.length > 0) {
       const query = `
-        INSERT INTO HOLDINGS (
-          cik, name, title, class, value
-        ) VALUES ${valuePlaceholders.join(', ')}
-        ON CONFLICT (cik, name, title, class) DO UPDATE SET
-          value = EXCLUDED.value`;
+          INSERT INTO HOLDINGS (
+            cik, name, title, class, value
+          ) VALUES ${valuePlaceholders.join(', ')}
+          ON CONFLICT (cik, name, title, class) DO UPDATE SET
+            value = EXCLUDED.value`;
 
       await client.query(query, valuesList);
     }
@@ -139,7 +144,7 @@ export async function upsertLatestBuys(
 }
 
 export async function getFundStats(identifier: string): Promise<any> {
-  const isCIK = /^\d+$/.test(identifier);
+  const { condition, param } = standardizeIdentifier(identifier);
 
   const query = `
     SELECT
@@ -147,19 +152,17 @@ export async function getFundStats(identifier: string): Promise<any> {
       quarter,
       qoq_change,
       recent_trend AS yoy_growth,
-      total_appreciation,
+      total_appreciation_str AS total_appreciation,
       volatility,
       max_growth,
       max_decline,
       growth_consistency
-    FROM fund_stats
-    WHERE ${isCIK ? 'cik = $1' : 'cik IN (SELECT cik FROM FILINGS WHERE LOWER(name) LIKE LOWER($1) LIMIT 1)'}
+    FROM FUND_COMPLETE_METRICS
+    WHERE ${condition}
   `;
 
-  const params = [isCIK ? identifier : `%${identifier}%`];
-
   try {
-    const result = await pool.query(query, params);
+    const result = await pool.query(query, [param]);
     if (!result.rows.length) {
       return {
         aum: 0,
@@ -182,8 +185,55 @@ export async function getFundStats(identifier: string): Promise<any> {
   }
 }
 
+export async function getFundCompleteMetrics(identifier: string): Promise<any> {
+  const { condition, param } = standardizeIdentifier(identifier);
+
+  const query = `
+    SELECT *
+    FROM FUND_COMPLETE_METRICS
+    WHERE ${condition}
+  `;
+
+  try {
+    const result = await pool.query(query, [param]);
+    if (!result.rows.length) {
+      return {
+        cik: '',
+        name: '',
+        aum: 0,
+        quarter: '',
+        qoq_change: 0,
+        volatility: '0',
+        max_growth: '0',
+        max_decline: '0',
+        growth_consistency: '0',
+        recent_trend: '0',
+        total_appreciation_str: '0',
+        total_appreciation_pct: 0,
+        latest_qoq_change_pct: 0,
+        top_holding_pct: 0,
+        top_10_holdings_pct: 0,
+        diversification_score: 0,
+        uniqueness_score: 0,
+        most_similar_fund: null,
+        overlap_count: 0,
+        aum_volatility_pct: 0,
+        drawdown_from_peak_pct: 0,
+        avg_filing_lag_days: 0,
+        latest_report_date: null,
+      };
+    }
+
+    logger.info(`Retrieved complete metrics for ${identifier}`);
+    return result.rows[0];
+  } catch (err) {
+    logger.error(`Error fetching complete metrics for ${identifier}: ${err}`);
+    throw err;
+  }
+}
+
 export async function getFundVolatility(identifier: string): Promise<any> {
-  const isCIK = /^\d+$/.test(identifier);
+  const { condition, param } = standardizeIdentifier(identifier);
 
   const query = `
     WITH filing_changes AS (
@@ -199,7 +249,7 @@ export async function getFundVolatility(identifier: string): Promise<any> {
           ELSE 0
         END AS percentage_change
       FROM FILINGS f1
-      WHERE ${isCIK ? 'f1.cik = $1' : 'LOWER(f1.name) LIKE LOWER($1)'}
+      WHERE ${condition}
         AND f1.total_value IS NOT NULL
       ORDER BY f1.report_date
     )
@@ -212,10 +262,8 @@ export async function getFundVolatility(identifier: string): Promise<any> {
     ORDER BY report_date ASC
   `;
 
-  const params = [isCIK ? identifier : `%${identifier}%`];
-
   try {
-    const result = await pool.query(query, params);
+    const result = await pool.query(query, [param]);
 
     const processedData = result.rows.map((row) => ({
       quarter: row.quarter,
@@ -232,7 +280,7 @@ export async function getFundVolatility(identifier: string): Promise<any> {
 }
 
 export async function getFundPurchases(identifier: string): Promise<any[]> {
-  const isCIK = /^\d+$/.test(identifier);
+  const { condition, param } = standardizeIdentifier(identifier);
 
   const query = `
     SELECT
@@ -242,13 +290,11 @@ export async function getFundPurchases(identifier: string): Promise<any[]> {
       class,
       ROUND(value::numeric, 2) as value_usd
     FROM HOLDINGS
-    WHERE ${isCIK ? 'cik = $1' : 'LOWER(name) LIKE LOWER($1)'}
+    WHERE ${condition}
   `;
 
-  const params = [isCIK ? identifier : `%${identifier}%`];
-
   try {
-    const result = await pool.query(query, params);
+    const result = await pool.query(query, [param]);
     logger.info(`Retrieved ${result.rows.length} purchases for ${identifier}`);
     return result.rows;
   } catch (err) {
@@ -286,7 +332,7 @@ export async function getFundClassDistribution(
   identifier: string,
   minPercentageThreshold: number = 0.2,
 ): Promise<any[]> {
-  const isCIK = /^\d+$/.test(identifier);
+  const { condition, param } = standardizeIdentifier(identifier);
 
   const query = `
     WITH class_distribution AS (
@@ -296,7 +342,7 @@ export async function getFundClassDistribution(
         ROUND(SUM(value)::numeric, 2) as total_value_usd,
         ROUND((SUM(value) / SUM(SUM(value)) OVER ())::numeric * 100, 2) as percentage_of_total
       FROM HOLDINGS
-      WHERE ${isCIK ? 'cik = $1' : 'LOWER(name) LIKE LOWER($1)'}
+      WHERE ${condition}
       GROUP BY class
       ORDER BY total_value_usd DESC
     )
@@ -313,13 +359,8 @@ export async function getFundClassDistribution(
     HAVING SUM(percentage_of_total) > 0
   `;
 
-  const params = [
-    isCIK ? identifier : `%${identifier}%`,
-    minPercentageThreshold,
-  ];
-
   try {
-    const result = await pool.query(query, params);
+    const result = await pool.query(query, [param, minPercentageThreshold]);
     logger.info(
       `Retrieved filtered class distribution for ${identifier} with min threshold ${minPercentageThreshold}%`,
     );
@@ -334,7 +375,7 @@ export async function getFundTopHoldings(
   identifier: string,
   limit: number = 10,
 ): Promise<any[]> {
-  const isCIK = /^\d+$/.test(identifier);
+  const { condition, param } = standardizeIdentifier(identifier);
 
   const query = `
     SELECT
@@ -343,19 +384,121 @@ export async function getFundTopHoldings(
       ROUND(value::numeric, 2) as value_usd,
       ROUND((value / SUM(value) OVER ())::numeric * 100, 2) as percentage_of_total
     FROM HOLDINGS
-    WHERE ${isCIK ? 'cik = $1' : 'LOWER(name) LIKE LOWER($1)'}
+    WHERE ${condition}
     ORDER BY value DESC
     LIMIT $2
   `;
 
-  const params = [isCIK ? identifier : `%${identifier}%`, limit];
-
   try {
-    const result = await pool.query(query, params);
+    const result = await pool.query(query, [param, limit]);
     logger.info(`Retrieved top ${limit} holdings for ${identifier}`);
     return result.rows;
   } catch (err) {
     logger.error(`Error fetching top holdings for ${identifier}: ${err}`);
+    throw err;
+  }
+}
+
+export async function getSimilarFunds(
+  cik: string,
+  limit: number = 5,
+): Promise<any[]> {
+  const query = `
+    WITH overlap_counts AS (
+      SELECT 
+        h1.cik AS fund1_cik,
+        h2.cik AS fund2_cik,
+        f2.name AS fund2_name,
+        COUNT(*) AS overlap_count,
+        COUNT(*) * 100.0 / (
+          SELECT COUNT(*) FROM HOLDINGS WHERE cik = h1.cik
+        ) AS overlap_percentage
+      FROM HOLDINGS h1
+      JOIN HOLDINGS h2 ON h1.title = h2.title AND h1.class = h2.class AND h1.cik <> h2.cik
+      JOIN FILINGS f2 ON h2.cik = f2.cik
+      WHERE h1.cik = $1
+      GROUP BY h1.cik, h2.cik, f2.name
+    )
+    SELECT 
+      fund2_cik AS cik,
+      fund2_name AS name,
+      overlap_count,
+      ROUND(overlap_percentage::numeric, 2) AS overlap_percentage
+    FROM overlap_counts
+    ORDER BY overlap_count DESC
+    LIMIT $2
+  `;
+
+  try {
+    const result = await pool.query(query, [cik, limit]);
+    logger.info(`Retrieved ${result.rows.length} similar funds for ${cik}`);
+    return result.rows;
+  } catch (err) {
+    logger.error(`Error fetching similar funds for ${cik}: ${err}`);
+    throw err;
+  }
+}
+
+export async function getTopPerformingFunds(
+  limit: number = 10,
+): Promise<any[]> {
+  const query = `
+    SELECT 
+      cik,
+      name,
+      aum,
+      quarter,
+      qoq_change,
+      total_appreciation_pct
+    FROM FUND_COMPLETE_METRICS
+    WHERE aum > 10000000  -- Filter out very small funds (optional)
+    ORDER BY total_appreciation_pct DESC
+    LIMIT $1
+  `;
+
+  try {
+    const result = await pool.query(query, [limit]);
+    logger.info(`Retrieved ${result.rows.length} top performing funds`);
+    return result.rows;
+  } catch (err) {
+    logger.error(`Error fetching top performing funds: ${err}`);
+    throw err;
+  }
+}
+
+export async function getMostUniqueFunds(limit: number = 10): Promise<any[]> {
+  const query = `
+    SELECT 
+      cik,
+      name,
+      aum,
+      uniqueness_score,
+      diversification_score,
+      top_10_holdings_pct
+    FROM FUND_COMPLETE_METRICS
+    WHERE aum > 10000000  -- Filter out very small funds
+    ORDER BY uniqueness_score DESC
+    LIMIT $1
+  `;
+
+  try {
+    const result = await pool.query(query, [limit]);
+    logger.info(`Retrieved ${result.rows.length} most unique funds`);
+    return result.rows;
+  } catch (err) {
+    logger.error(`Error fetching most unique funds: ${err}`);
+    throw err;
+  }
+}
+
+export async function refreshFundMetrics(): Promise<void> {
+  try {
+    await pool.query('REFRESH MATERIALIZED VIEW FUND_COMPLETE_METRICS');
+    logger.info(
+      'Successfully refreshed FUND_COMPLETE_METRICS materialized view',
+    );
+  } catch (err) {
+    logger.error(`Error refreshing materialized view: ${err}`);
     throw err;
   }
 }

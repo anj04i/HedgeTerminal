@@ -3,17 +3,20 @@ import KeyvRedis from '@keyv/redis';
 import logger from '../utils/logger';
 
 export const CACHE_KEYS = {
-  funds: 'funds',
   fundFilings: (identifier: string) => `fund:${identifier}:filings`,
   fundStats: (identifier: string) => `fund:${identifier}:stats`,
+  fundCompleteMetrics: (identifier: string) => `fund:${identifier}:metrics`,
   fundVolatility: (identifier: string) => `fund:${identifier}:volatility`,
   fundPurchases: (identifier: string) => `fund:${identifier}:purchases`,
   fundClassDistribution: (identifier: string) =>
-    `fund:${identifier}:class-distribution`,
+    `fund:${identifier}:class-dist`,
   fundTopHoldings: (identifier: string, limit: number) =>
     `fund:${identifier}:top-holdings:${limit}`,
   popularHoldings: (limit: number) => `holdings:popular:${limit}`,
-} as const;
+  similarFunds: (cik: string, limit: number) => `fund:${cik}:similar:${limit}`,
+  topPerformingFunds: (limit: number) => `funds:top-performing:${limit}`,
+  mostUniqueFunds: (limit: number) => `funds:most-unique:${limit}`,
+};
 
 const REDIS_URL = Bun.env.REDIS_URL || process.env.REDIS_URL;
 

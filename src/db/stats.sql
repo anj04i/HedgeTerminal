@@ -1,5 +1,5 @@
--- Create the materialized view with one row per fund
-CREATE MATERIALIZED VIEW fund_stats AS WITH first_filings AS (
+CREATE MATERIALIZED VIEW FUND_COMPLETE_METRICS AS WITH -- Common CTEs from the first view
+first_filings AS (
     -- Get the first filing for each fund
     SELECT
         cik,
@@ -37,6 +37,7 @@ latest_values AS (
     -- Get the latest values for each fund
     SELECT
         f.cik,
+        f.name,
         f.total_value AS aum,
         TO_CHAR(f.report_date, 'YYYY-Q') AS quarter,
         f.report_date
@@ -72,6 +73,11 @@ quarterly_changes AS (
         pq.total_value,
         CASE
             WHEN f.total_value IS NOT NULL
+            AND f.total_value != 0 THEN ((pq.total_value / f.total_value) - 1)
+            ELSE NULL
+        END AS qoq_change_decimal,
+        CASE
+            WHEN f.total_value IS NOT NULL
             AND f.total_value != 0 THEN ROUND(
                 ((pq.total_value / f.total_value - 1) * 100) :: numeric,
                 2
@@ -87,6 +93,7 @@ volatility_stats AS (
     -- Calculate volatility stats
     SELECT
         cik,
+        STDDEV(qoq_change_decimal) * 100 AS aum_volatility_pct,
         ROUND(COALESCE(STDDEV(qoq_change), 0) :: numeric, 2) :: text AS volatility,
         ROUND(COALESCE(MAX(qoq_change), 0) :: numeric, 2) :: text AS max_growth,
         ROUND(COALESCE(MIN(qoq_change), 0) :: numeric, 2) :: text AS max_decline
@@ -139,9 +146,150 @@ latest_change AS (
         quarterly_changes qc
         JOIN latest_values lv ON qc.cik = lv.cik
         AND qc.report_date = lv.report_date
+),
+-- Maximum AUM ever achieved per fund (for drawdown calculation)
+max_aum AS (
+    SELECT
+        cik,
+        MAX(total_value) AS peak_value
+    FROM
+        FILINGS
+    GROUP BY
+        cik
+),
+-- Filing lag calculation
+filing_lags AS (
+    SELECT
+        cik,
+        AVG(filing_date - report_date) AS avg_lag_days
+    FROM
+        FILINGS
+    GROUP BY
+        cik
+),
+-- Calculate holding weights for each fund's latest filing
+holding_weights AS (
+    SELECT
+        h.cik,
+        h.title,
+        h.class,
+        h.value,
+        SUM(h.value) OVER (PARTITION BY h.cik) AS total_portfolio_value,
+        h.value / NULLIF(SUM(h.value) OVER (PARTITION BY h.cik), 0) AS weight,
+        ROW_NUMBER() OVER (
+            PARTITION BY h.cik
+            ORDER BY
+                h.value DESC
+        ) AS holding_rank
+    FROM
+        HOLDINGS h
+        JOIN latest_values lv ON h.cik = lv.cik
+),
+-- Top position concentration
+top_position AS (
+    SELECT
+        cik,
+        MAX(
+            CASE
+                WHEN holding_rank = 1 THEN weight
+                ELSE 0
+            END
+        ) * 100 AS top_holding_pct
+    FROM
+        holding_weights
+    GROUP BY
+        cik
+),
+-- Top 10 holdings share
+top_ten_share AS (
+    SELECT
+        cik,
+        SUM(
+            CASE
+                WHEN holding_rank <= 10 THEN weight
+                ELSE 0
+            END
+        ) * 100 AS top_10_holdings_pct
+    FROM
+        holding_weights
+    GROUP BY
+        cik
+),
+-- Diversification score (1 / sum of squared weights)
+diversification AS (
+    SELECT
+        cik,
+        1 / NULLIF(SUM(weight * weight), 0) AS diversification_score
+    FROM
+        holding_weights
+    GROUP BY
+        cik
+),
+-- Uniqueness calculation - holdings that appear in only one fund
+unique_holdings AS (
+    SELECT
+        title,
+        class
+    FROM
+        HOLDINGS
+    GROUP BY
+        title,
+        class
+    HAVING
+        COUNT(DISTINCT cik) = 1
+),
+-- Calculate uniqueness score per fund
+uniqueness_score AS (
+    SELECT
+        h.cik,
+        COUNT(
+            DISTINCT CASE
+                WHEN uh.title IS NOT NULL THEN h.title || h.class
+                ELSE NULL
+            END
+        ) * 100.0 / NULLIF(COUNT(DISTINCT h.title || h.class), 0) AS uniqueness_pct
+    FROM
+        HOLDINGS h
+        LEFT JOIN unique_holdings uh ON h.title = uh.title
+        AND h.class = uh.class
+    GROUP BY
+        h.cik
+),
+-- Fund similarity based on holding overlap
+fund_similarity AS (
+    SELECT
+        h1.cik AS fund1,
+        h2.cik AS fund2,
+        COUNT(*) AS overlap_count,
+        ROW_NUMBER() OVER (
+            PARTITION BY h1.cik
+            ORDER BY
+                COUNT(*) DESC
+        ) AS similarity_rank
+    FROM
+        HOLDINGS h1
+        JOIN HOLDINGS h2 ON h1.title = h2.title
+        AND h1.class = h2.class
+        AND h1.cik != h2.cik
+    GROUP BY
+        h1.cik,
+        h2.cik
+),
+-- Only keep the most similar fund for each fund
+most_similar AS (
+    SELECT
+        fund1 AS cik,
+        fund2 AS most_similar_fund,
+        overlap_count
+    FROM
+        fund_similarity
+    WHERE
+        similarity_rank = 1
 ) -- Final result combining all metrics
 SELECT
     lv.cik,
+    lv.name,
+    -- Metrics from fund_stats
     lv.aum,
     lv.quarter,
     COALESCE(lc.qoq_change, 0) AS qoq_change,
@@ -152,18 +300,51 @@ SELECT
     COALESCE(rt.recent_trend, '0') AS recent_trend,
     COALESCE(
         ROUND(
-            ((lv.aum / fv.first_value - 1) * 100) :: numeric,
+            ((lv.aum / NULLIF(fv.first_value, 0) - 1) * 100) :: numeric,
             1
         ) :: text,
         '0'
-    ) AS total_appreciation
+    ) AS total_appreciation_str,
+    -- Metrics from FUND_METRICS
+    COALESCE(
+        ROUND(
+            (lv.aum / NULLIF(fv.first_value, 0) - 1) * 100,
+            2
+        ),
+        0
+    ) AS total_appreciation_pct,
+    COALESCE(ROUND(lc.qoq_change, 2), 0) AS latest_qoq_change_pct,
+    COALESCE(ROUND(tp.top_holding_pct, 2), 0) AS top_holding_pct,
+    COALESCE(ROUND(tts.top_10_holdings_pct, 2), 0) AS top_10_holdings_pct,
+    COALESCE(ROUND(d.diversification_score, 2), 0) AS diversification_score,
+    COALESCE(ROUND(us.uniqueness_pct, 2), 0) AS uniqueness_score,
+    ms.most_similar_fund,
+    ms.overlap_count,
+    COALESCE(ROUND(vs.aum_volatility_pct, 2), 0) AS aum_volatility_pct,
+    COALESCE(
+        ROUND(
+            (1 - (lv.aum / NULLIF(ma.peak_value, 0))) * 100,
+            2
+        ),
+        0
+    ) AS drawdown_from_peak_pct,
+    COALESCE(ROUND(fl.avg_lag_days, 1), 0) AS avg_filing_lag_days,
+    -- Additional info
+    lv.report_date AS latest_report_date
 FROM
     latest_values lv
     JOIN first_values fv ON lv.cik = fv.cik
     LEFT JOIN volatility_stats vs ON lv.cik = vs.cik
     LEFT JOIN growth_consistency gc ON lv.cik = gc.cik
     LEFT JOIN recent_trend rt ON lv.cik = rt.cik
-    LEFT JOIN latest_change lc ON lv.cik = lc.cik;
+    LEFT JOIN latest_change lc ON lv.cik = lc.cik
+    LEFT JOIN max_aum ma ON lv.cik = ma.cik
+    LEFT JOIN filing_lags fl ON lv.cik = fl.cik
+    LEFT JOIN top_position tp ON lv.cik = tp.cik
+    LEFT JOIN top_ten_share tts ON lv.cik = tts.cik
+    LEFT JOIN diversification d ON lv.cik = d.cik
+    LEFT JOIN uniqueness_score us ON lv.cik = us.cik
+    LEFT JOIN most_similar ms ON lv.cik = ms.cik;
 
--- Create an index for fast lookups
-CREATE UNIQUE INDEX idx_fund_stats_cik ON fund_stats (cik);
+-- Create index for faster lookups
+CREATE UNIQUE INDEX idx_fund_complete_metrics_cik ON FUND_COMPLETE_METRICS(cik);

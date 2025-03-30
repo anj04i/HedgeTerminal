@@ -1,0 +1,21 @@
+// Dashboard styling configuration
+export const config = {
+  primaryColor: '#3B82F6',
+  primaryColorLight: '#DBEAFE',
+  primaryGradientStart: '#3B82F6',
+  primaryGradientEnd: '#3B82F6',
+  tooltipBackground: '#FFFFFF',
+  tooltipText: '#111827',
+  tooltipBorder: '#E5E7EB',
+  gridStroke: '#E5E7EB',
+  axisText: '#6B7280',
+  axisLabel: '#374151',
+  bgBase: 'bg-gray-50',
+  bgCard: 'bg-white',
+  textPrimary: 'text-gray-900',
+  textSecondary: 'text-gray-800',
+  textMuted: 'text-gray-900',
+  textHighlightPositive: 'text-green-600',
+  textHighlightNegative: 'text-red-600',
+  borderBase: 'border-gray-200',
+};

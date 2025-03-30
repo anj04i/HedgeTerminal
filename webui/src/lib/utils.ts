@@ -1,116 +1,117 @@
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import {
+  ConfigResponse,
+  FilingsResponse,
+  StatsResponse,
+  VolatilityResponse,
+  HoldingsResponse,
+  ClassDistributionResponse,
+  PurchasesResponse,
+  PopularHoldingsResponse,
+  MetricsResponse,
+  SimilarFundsResponse,
+} from './types';
 
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+const API_BASE_URL = process.env.NEXT_PUBLIC_API || '';
+
+console.log(API_BASE_URL);
+
+export async function fetchApi<T>(endpoint: string): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`API error (${response.status}): ${errorText}`);
+  }
+
+  return response.json() as Promise<T>;
 }
 
-// API Types
-export type Fund = {
-  name: string;
-  cik: string;
-};
+// Specific API functions for cleaner code
+export async function fetchConfig(): Promise<ConfigResponse> {
+  return fetchApi<ConfigResponse>('/api/config');
+}
 
-export type FundFiling = {
-  quarter: string;
-  value_usd: number;
-};
+export async function fetchFundFilings(cik: string): Promise<FilingsResponse> {
+  return fetchApi<FilingsResponse>(`/api/funds/${cik}/filings`);
+}
 
-export type ConfigResponse = {
-  funds: Fund[];
-};
+export async function fetchFundStats(cik: string): Promise<StatsResponse> {
+  return fetchApi<StatsResponse>(`/api/funds/${cik}/stats`);
+}
 
-export type FilingsResponse = {
-  message: string;
-  filings: FundFiling[];
-};
+export async function fetchFundVolatility(
+  cik: string,
+): Promise<VolatilityResponse> {
+  return fetchApi<VolatilityResponse>(`/api/funds/${cik}/volatility`);
+}
 
-export type StatsResponse = {
-  message: string;
-  stats: {
-    aum: number;
-    quarter: string;
-    qoq_change: string;
-    yoy_growth: string;
-    total_appreciation: string;
-    volatility: string;
-    max_growth: string;
-    max_decline: string;
-    growth_consistency: string;
-  };
-};
+export async function fetchFundPurchases(
+  cik: string,
+): Promise<PurchasesResponse> {
+  return fetchApi<PurchasesResponse>(`/api/funds/${cik}/purchases`);
+}
 
-export type VolatilityData = {
-  quarter: string;
-  change: string;
-  value: number;
-};
+export async function fetchFundClassDistribution(
+  cik: string,
+): Promise<ClassDistributionResponse> {
+  return fetchApi<ClassDistributionResponse>(
+    `/api/funds/${cik}/class-distribution`,
+  );
+}
 
-export type VolatilityResponse = {
-  message: string;
-  volatility: VolatilityData[];
-};
+export async function fetchFundTopHoldings(
+  cik: string,
+): Promise<HoldingsResponse> {
+  return fetchApi<HoldingsResponse>(`/api/funds/${cik}/top-holdings`);
+}
 
-export type Purchase = {
-  cik: string;
-  name: string;
-  title: string;
-  class: string;
-  value_usd: number;
-};
+export async function fetchPopularHoldings(): Promise<PopularHoldingsResponse> {
+  return fetchApi<PopularHoldingsResponse>('/api/holdings/popular');
+}
 
-export type PurchasesResponse = {
-  message: string;
-  purchases: Purchase[];
-};
+export async function fetchFundMetrics(cik: string): Promise<MetricsResponse> {
+  return fetchApi<MetricsResponse>(`/api/funds/${cik}/metrics`);
+}
 
-export type ClassDistribution = {
-  class: string;
-  holding_count: number;
-  total_value_usd: number;
-  percentage_of_total: number;
-};
+export async function fetchSimilarFunds(
+  cik: string,
+): Promise<SimilarFundsResponse> {
+  return fetchApi<SimilarFundsResponse>(`/api/funds/${cik}/similar`);
+}
 
-export type ClassDistributionResponse = {
-  message: string;
-  distribution: ClassDistribution[];
-};
+export async function fetchTopPerformingFunds(
+  limit: number = 10,
+): Promise<any> {
+  return fetchApi<any>(`/api/funds/top-performing?limit=${limit}`);
+}
 
-export type Holding = {
-  title: string;
-  class: string;
-  value_usd: number;
-  percentage_of_total: number;
-};
+export async function fetchMostUniqueFunds(limit: number = 10): Promise<any> {
+  return fetchApi<any>(`/api/funds/most-unique?limit=${limit}`);
+}
 
-export type TopHoldingsResponse = {
-  message: string;
-  holdings: Holding[];
-};
+// Format currency for display
+export function formatCurrency(value: number, decimals: number = 2): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(value);
+}
 
-export type PopularHolding = {
-  title: string;
-  class: string;
-  fund_count: number;
-  total_value_usd: number;
-};
+// Format percentage for display
+export function formatPercentage(value: number, decimals: number = 1): string {
+  return `${value >= 0 ? '+' : ''}${value.toFixed(decimals)}%`;
+}
 
-export type PopularHoldingsResponse = {
-  message: string;
-  holdings: PopularHolding[];
-};
-
-// API Fetch Function
-export async function fetchApi<T>(endpoint: string): Promise<T> {
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API}${endpoint}`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data: T = await response.json();
-    return data;
-  } catch (error) {
-    console.error(`Error fetching ${endpoint}:`, error);
-    throw error;
+// Format large numbers with B/M/K suffixes
+export function formatLargeNumber(value: number): string {
+  if (value >= 1e9) {
+    return `${(value / 1e9).toFixed(2)}B`;
+  } else if (value >= 1e6) {
+    return `${(value / 1e6).toFixed(2)}M`;
+  } else if (value >= 1e3) {
+    return `${(value / 1e3).toFixed(2)}K`;
   }
+  return value.toString();
 }
