@@ -194,38 +194,38 @@ export default function Dashboard() {
     <div className={`font-sans ${config.bgBase} min-h-screen`}>
       {/* Header */}
       <div
-        className={`${config.bgCard} border-b ${config.borderBase} p-4 flex items-center justify-between relative`}
+        className={`${config.bgCard} border-b ${config.borderBase} p-4 flex flex-col sm:flex-row items-center justify-between gap-4 relative`}
       >
         {/* left side */}
-        <div className={`font-bold text-xl ${config.textSecondary}`}>
+        <div
+          className={`font-bold text-xl ${config.textSecondary} mb-3 sm:mb-0`}
+        >
           13F INSIGHTS
         </div>
 
-        {/* center search trigger */}
-        <div className="absolute left-1/2 -translate-x-1/2 w-full max-w-md">
+        {/* center search trigger - positioned relative on mobile, absolute on desktop */}
+        <div className="w-full sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:max-w-md">
           <button
             onClick={() => setOpen(true)}
             className="w-full flex items-center justify-between px-3 py-1.5 text-sm border rounded-md bg-white text-gray-600 hover:bg-gray-50 border-gray-300 shadow-sm"
           >
             <span className="flex items-center gap-2">
               <Search className="w-4 h-4 text-gray-500" />
-              <span className="hidden sm:inline text-gray-500">
-                Search funds...
-              </span>
+              <span className="text-gray-500">Search funds...</span>
             </span>
-            <kbd className="text-xs text-gray-500 border border-gray-300 bg-gray-100 px-1.5 py-0.5 rounded">
+            <kbd className="hidden sm:inline text-xs text-gray-500 border border-gray-300 bg-gray-100 px-1.5 py-0.5 rounded">
               ⌘K
             </kbd>
           </button>
         </div>
 
-        {/* right side export button */}
+        {/* right side export button - hidden on mobile */}
         <button
-          className={`flex items-center px-4 py-2 ${config.bgCard} border ${config.borderBase} ${config.textSecondary} rounded-md transition-colors`}
+          className={`hidden sm:flex items-center px-4 py-2 ${config.bgCard} border ${config.borderBase} ${config.textSecondary} rounded-md transition-colors`}
           onClick={handleExportCSV}
         >
           <Download className="mr-2 h-4 w-4" />
-          Export
+          <span className="whitespace-nowrap">Export</span>
         </button>
 
         {/* command palette */}
