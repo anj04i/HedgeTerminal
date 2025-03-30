@@ -262,18 +262,6 @@ export default function Dashboard() {
         </>
       )}
 
-      {!selectedFund && (
-        <div className="px-6 py-12 text-center">
-          <h3 className={`text-xl font-bold mb-2 ${config.textSecondary}`}>
-            Select a Fund
-          </h3>
-          <p className={config.textMuted}>
-            Choose an institutional investment fund to view their 13F filing
-            history and performance metrics
-          </p>
-        </div>
-      )}
-
       {/* Footer */}
       <footer
         className={`border-t ${config.borderBase} py-6 mt-10 text-center text-xs ${config.textMuted}`}
