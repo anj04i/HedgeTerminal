@@ -262,18 +262,6 @@ export default function Dashboard() {
         </>
       )}
 
-      {/* Loading States */}
-      {selectedFund && filings.length === 0 && (
-        <div className="px-6 py-12 text-center">
-          <h3 className={`text-xl font-bold mb-2 ${config.textSecondary}`}>
-            Loading Data...
-          </h3>
-          <p className={config.textMuted}>
-            Retrieving 13F filing information for {selectedFund}
-          </p>
-        </div>
-      )}
-
       {!selectedFund && (
         <div className="px-6 py-12 text-center">
           <h3 className={`text-xl font-bold mb-2 ${config.textSecondary}`}>
