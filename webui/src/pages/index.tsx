@@ -101,7 +101,7 @@ export default function Dashboard() {
         <div
           className={`font-bold text-xl ${config.textSecondary} mb-3 sm:mb-0`}
         >
-          13F INSIGHTS
+          Hedge Terminal
         </div>
 
         <div className="w-full sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:max-w-md">
