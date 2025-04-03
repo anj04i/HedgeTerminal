@@ -1,11 +1,30 @@
 import { darkTheme } from '@/components/v2/theme';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function Landing() {
   const [isHedgeHovered, setIsHedgeHovered] = useState(false);
   const [isLaunchHovered, setIsLaunchHovered] = useState(false);
   const [isLearnHovered, setIsLearnHovered] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Handle responsive detection
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    // Check on initial load
+    checkIsMobile();
+
+    // Add resize listener
+    window.addEventListener('resize', checkIsMobile);
+
+    // Clean up listener
+    return () => {
+      window.removeEventListener('resize', checkIsMobile);
+    };
+  }, []);
 
   return (
     <>
@@ -45,23 +64,24 @@ export default function Landing() {
               </linearGradient>
             </defs>
             <rect width="100%" height="100%" fill="url(#bgGradient)" />
-            {Array.from({ length: 30 }).map((_, i) => (
+            {/* Reduce grid lines on mobile for better performance */}
+            {Array.from({ length: isMobile ? 15 : 30 }).map((_, i) => (
               <line
                 key={`h-${i}`}
                 x1="0"
-                y1={`${(i + 1) * 3.33}%`}
+                y1={`${(i + 1) * (isMobile ? 6.66 : 3.33)}%`}
                 x2="100%"
-                y2={`${(i + 1) * 3.33}%`}
+                y2={`${(i + 1) * (isMobile ? 6.66 : 3.33)}%`}
                 stroke="#111"
                 strokeWidth="1"
               />
             ))}
-            {Array.from({ length: 30 }).map((_, i) => (
+            {Array.from({ length: isMobile ? 15 : 30 }).map((_, i) => (
               <line
                 key={`v-${i}`}
-                x1={`${(i + 1) * 3.33}%`}
+                x1={`${(i + 1) * (isMobile ? 6.66 : 3.33)}%`}
                 y1="0"
-                x2={`${(i + 1) * 3.33}%`}
+                x2={`${(i + 1) * (isMobile ? 6.66 : 3.33)}%`}
                 y2="100%"
                 stroke="#111"
                 strokeWidth="1"
@@ -76,7 +96,7 @@ export default function Landing() {
             />
           </svg>
         </div>
-        <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6">
+        <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 md:px-6">
           <div className="max-w-6xl w-full mx-auto flex flex-col items-center text-center">
             <div
               className="text-base font-semibold tracking-tight mb-4 flex items-center gap-1"
@@ -99,23 +119,29 @@ export default function Landing() {
               </span>
             </div>
             <h1
-              className="text-6xl md:text-7xl font-bold leading-snug tracking-tight"
+              className="text-4xl sm:text-5xl md:text-7xl font-bold leading-tight md:leading-snug tracking-tight"
               style={{ color: darkTheme.text }}
             >
               Institutional-grade intelligence
-              <br /> without the institutional noise.
+              <br className="hidden sm:block" />{' '}
+              <span className="sm:hidden">without the</span>
+              <span className="hidden sm:inline">
+                {' '}
+                without the institutional
+              </span>{' '}
+              noise.
             </h1>
             <p
-              className="mt-6 text-lg max-w-2xl"
+              className="mt-6 text-base md:text-lg max-w-2xl"
               style={{ color: darkTheme.secondaryText }}
             >
               A fund analytics terminal designed for quants, researchers, and
               capital allocators. Streamlined. Precise. Blazing fast.
             </p>
-            <div className="mt-10 flex flex-col sm:flex-row justify-center gap-4">
+            <div className="mt-8 md:mt-10 flex flex-col sm:flex-row justify-center gap-3 md:gap-4 w-full sm:w-auto">
               <Link href="/dashboard" legacyBehavior>
                 <a
-                  className="px-6 py-3 font-medium rounded text-black transition-all duration-300"
+                  className="w-full sm:w-auto px-6 py-3 font-medium rounded text-black transition-all duration-300"
                   style={{
                     backgroundColor: isLaunchHovered
                       ? darkTheme.accentHover
@@ -132,7 +158,7 @@ export default function Landing() {
               </Link>
               <Link href="/learn" legacyBehavior>
                 <a
-                  className="px-6 py-3 border rounded transition-all duration-300"
+                  className="w-full sm:w-auto px-6 py-3 border rounded transition-all duration-300"
                   style={{
                     borderColor: isLearnHovered
                       ? darkTheme.accentHover

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { fundMap } from './config';
 
 import { FundHeader } from './FundHeader';
@@ -94,6 +94,40 @@ export const FundDashboard: React.FC<FundDashboardProps> = ({ initialCik }) => {
     }
   }, [isLoading]);
 
+  // Function to create the export data object
+  const getExportData = () => {
+    // Get current fund name
+    let currentFundName = null;
+    if (selectedFund) {
+      if (fundMap[selectedFund]) {
+        currentFundName = selectedFund;
+      } else {
+        for (const [name, cik] of Object.entries(fundMap)) {
+          if (cik === selectedFund) {
+            currentFundName = name;
+            break;
+          }
+        }
+      }
+    }
+
+    // Return all the data in a well-structured format
+    return {
+      fund: {
+        name: currentFundName,
+        cik: selectedFund,
+      },
+      metrics,
+      stats,
+      filings,
+      holdings: purchases,
+      classDistribution,
+      quarterlyChanges,
+      similarFunds,
+      exportDate: new Date().toISOString(),
+    };
+  };
+
   if (error) {
     return (
       <div
@@ -120,6 +154,7 @@ export const FundDashboard: React.FC<FundDashboardProps> = ({ initialCik }) => {
         selectedFund={selectedFund}
         onSelectFund={handleSelectFund}
         isMobile={isMobile}
+        exportData={getExportData}
       />
       <FundHeader metrics={metrics} isMobile={isMobile} />
 
@@ -223,11 +258,14 @@ export const FundDashboard: React.FC<FundDashboardProps> = ({ initialCik }) => {
         )}
       </div>
 
-      <PortfolioMetricsPanel
-        metrics={metrics}
-        stats={stats}
-        isMobile={isMobile}
-      />
+      {/* Only show PortfolioMetricsPanel on non-mobile screens */}
+      {!isMobile && (
+        <PortfolioMetricsPanel
+          metrics={metrics}
+          stats={stats}
+          isMobile={false}
+        />
+      )}
     </div>
   );
 };

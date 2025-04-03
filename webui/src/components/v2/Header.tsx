@@ -13,6 +13,7 @@ interface HeaderProps {
   selectedFund: string | null;
   onSelectFund: (fundName: string, cik: string) => void;
   isMobile?: boolean;
+  exportData?: () => any; // Function that returns the data to export
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,6 +21,7 @@ export const Header: React.FC<HeaderProps> = ({
   selectedFund,
   onSelectFund,
   isMobile = false,
+  exportData,
 }) => {
   const getCurrentFundName = () => {
     if (!selectedFund) return null;
@@ -33,6 +35,42 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const currentFundName = getCurrentFundName();
+
+  const handleExport = () => {
+    if (!exportData) return;
+
+    try {
+      // Get the data to export
+      const data = exportData();
+
+      // Convert to JSON string with pretty formatting
+      const jsonString = JSON.stringify(data, null, 2);
+
+      // Create a Blob with the JSON data
+      const blob = new Blob([jsonString], { type: 'application/json' });
+
+      // Create a URL for the blob
+      const url = URL.createObjectURL(blob);
+
+      // Create a temporary anchor element
+      const link = document.createElement('a');
+
+      // Set up the download
+      link.href = url;
+      link.download = `${currentFundName || 'fund'}_data.json`;
+
+      // Append to body, click, and clean up
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Release the URL object
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      alert('There was an error exporting the data. Please try again.');
+    }
+  };
 
   return (
     <div
@@ -113,6 +151,14 @@ export const Header: React.FC<HeaderProps> = ({
           style={{
             backgroundColor: darkTheme.accent,
             color: '#0f0f13',
+            cursor: 'pointer',
+          }}
+          onClick={handleExport}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = darkTheme.accentHover;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = darkTheme.accent;
           }}
         >
           Export
