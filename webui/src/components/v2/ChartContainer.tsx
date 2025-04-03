@@ -25,7 +25,7 @@ const formatQuarter = (quarter: string) => {
 };
 
 const tooltipStyle = {
-  backgroundColor: darkTheme.cardBackground,
+  backgroundColor: darkTheme.tooltipBackground,
   border: `1px solid ${darkTheme.border}`,
   color: darkTheme.text,
   borderRadius: '4px',
@@ -41,16 +41,16 @@ const ChartCard: React.FC<{
   children: React.ReactNode;
 }> = ({ title, children }) => (
   <div
-    className="rounded-lg p-4 flex flex-col min-h-[300px] md:min-h-0"
+    className="rounded-sm p-4 flex flex-col min-h-[300px]"
     style={{
       backgroundColor: darkTheme.cardBackground,
       border: `1px solid ${darkTheme.border}`,
       flex: 1,
-      minHeight: 0,
+      minHeight: 300,
     }}
   >
-    <h3 className="text-xs font-medium text-gray-200 mb-2">{title}</h3>
-    <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
+    <h3 className="text-xs font-medium text-white mb-2">{title}</h3>
+    <div className="flex-1 overflow-hidden">{children}</div>
   </div>
 );
 
@@ -210,7 +210,9 @@ const SectorChart = memo(({ data }: { data: ClassDistribution[] }) => {
             <Cell
               key={`cell-${index}`}
               fill={darkTheme.accent}
-              onMouseEnter={(e) => (e.currentTarget.style.fill = '#22c55e')}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.fill = darkTheme.accentHover)
+              }
               onMouseLeave={(e) =>
                 (e.currentTarget.style.fill = darkTheme.accent)
               }
@@ -237,16 +239,20 @@ export const ChartContainer = memo(
     classDistribution: ClassDistribution[];
   }) => {
     return (
-      <div className="flex-1 flex flex-col overflow-auto p-4 gap-4 min-h-0">
-        <ChartCard title="Quarter-over-quarter change">
-          <QuarterlyChart data={filings} />
-        </ChartCard>
-        <ChartCard title="Quarterly volatility">
-          <VolatilityChart data={quarterlyChanges} />
-        </ChartCard>
-        <ChartCard title="Sector breakdown">
-          <SectorChart data={classDistribution} />
-        </ChartCard>
+      <div className="flex-1 flex flex-col overflow-auto p-4 gap-4">
+        <div className="flex flex-col gap-4 flex-1 overflow-auto">
+          <ChartCard title="Quarter-over-quarter change">
+            <QuarterlyChart data={filings} />
+          </ChartCard>
+
+          <ChartCard title="Quarterly volatility">
+            <VolatilityChart data={quarterlyChanges} />
+          </ChartCard>
+
+          <ChartCard title="Sector breakdown">
+            <SectorChart data={classDistribution} />
+          </ChartCard>
+        </div>
       </div>
     );
   },
