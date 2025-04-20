@@ -27,10 +27,8 @@ app.use('*', cors());
 app.use(
   '/api/*',
   compress({
-    encodings: ['gzip', 'br'], // Prefer gzip for speed
-    threshold: 10240, // Only compress responses >10KB
-    brotliLevel: 2, // Lower brotli compression level (faster)
-    gzipLevel: 4, // Moderate gzip compression level
+    encodings: ['br', 'gzip'], // brotli if client accepts it
+    threshold: 1024, // don’t waste CPU on <1 KB
   }),
 );
 
@@ -496,16 +494,21 @@ app.get('/api/funds/:cik/all', async (c) => {
   const cik = c.req.param('cik');
   if (!/^\d+$/.test(cik)) return c.json({ error: 'Valid CIK required' }, 400);
 
-  const cacheKey = CACHE_KEYS.fundAll(cik);
-  let json = await cache.get(cacheKey);
+  const key = CACHE_KEYS.fundAll(cik);
+  let json = await cache.get(key);
 
   if (!json) {
-    json = await getFundAllPayload(cik);
-    if (!json) return c.json({ error: 'Fund not found' }, 404);
-    await cache.set(cacheKey, json, 300_000);
+    const payload = await getFundAllPayload(cik);
+    if (!payload) return c.json({ error: 'Fund not found' }, 404);
+
+    json = JSON.stringify(payload);
+    await cache.set(key, json, 300_000);
   }
 
-  return c.json(json, 200);
+  return new Response(json, {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
 });
 
 export default app;
