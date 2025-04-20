@@ -1,6 +1,5 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { brotliCompressSync, gzipSync } from 'zlib';
 import {
   getFundClassDistribution,
   getFundFilings,
@@ -19,18 +18,19 @@ import {
 import logger from './utils/logger';
 import { funds } from './scripts/config';
 import { CACHE_KEYS, cache } from './cache';
+import compress from 'hono-compress';
 
 const app = new Hono();
 
 app.use('*', cors());
 
-// app.use(
-//   '/api/*',
-//   compress({
-//     encodings: ['br', 'gzip'], // brotli if client accepts it
-//     threshold: 1024, // don’t waste CPU on <1 KB
-//   }),
-// );
+app.use(
+  '/api/*',
+  compress({
+    encodings: ['br', 'gzip'], // brotli if client accepts it
+    threshold: 1024, // don’t waste CPU on <1 KB
+  }),
+);
 
 app.get('/health', async (c) => {
   return c.text('ok');
@@ -494,39 +494,16 @@ app.get('/api/funds/:cik/all', async (c) => {
   const cik = c.req.param('cik');
   if (!/^\d+$/.test(cik)) return c.json({ error: 'Valid CIK required' }, 400);
 
-  const accept = c.req.header('accept-encoding') ?? '';
-  const enc = accept.includes('br')
-    ? 'br'
-    : accept.includes('gzip')
-      ? 'gzip'
-      : ('identity' as const);
+  const cacheKey = CACHE_KEYS.fundAll(cik);
+  let json = await cache.get(cacheKey);
 
-  const base = CACHE_KEYS.fundAll(cik);
-  const key = enc === 'identity' ? base : `${base}:${enc}`;
-
-  let body = await cache.get<Uint8Array>(key);
-
-  if (!body) {
-    const json = await getFundAllPayload(cik);
+  if (!json) {
+    json = await getFundAllPayload(cik);
     if (!json) return c.json({ error: 'Fund not found' }, 404);
-
-    const raw = new TextEncoder().encode(JSON.stringify(json));
-
-    body =
-      enc === 'br'
-        ? brotliCompressSync(raw)
-        : enc === 'gzip'
-          ? gzipSync(raw)
-          : raw;
-
-    await cache.set(key, body, 300_000);
+    await cache.set(cacheKey, json, 300_000);
   }
 
-  return c.body(body, 200, {
-    'Content-Type': 'application/json',
-    ...(enc !== 'identity' && { 'Content-Encoding': enc }),
-    'Cache-Control': 'public,max-age=300,stale-while-revalidate=60',
-  });
+  return c.json(json, 200);
 });
 
 export default app;
