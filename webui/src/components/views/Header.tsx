@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Select,
   SelectContent,
@@ -7,6 +6,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { darkTheme } from './theme';
+import Link from 'next/link';
 
 interface HeaderProps {
   fundMap: Record<string, string>;
@@ -77,7 +77,8 @@ export const Header: React.FC<HeaderProps> = ({
       className={`flex items-center ${isMobile ? 'flex-col py-2' : 'justify-between px-4 py-3'} border-b`}
       style={{ borderColor: darkTheme.border }}
     >
-      <div
+    
+      <Link href="/" 
         className="text-lg font-medium flex items-center"
         style={{ color: darkTheme.text }}
       >
@@ -90,7 +91,7 @@ export const Header: React.FC<HeaderProps> = ({
         <span className="ml-1" style={{ color: darkTheme.accent }}>
           HedgeTerminal
         </span>
-      </div>
+      </Link>
       <div
         className={`flex items-center gap-4 ${isMobile ? 'w-full px-2' : ''}`}
       >

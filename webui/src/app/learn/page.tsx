@@ -1,4 +1,4 @@
-import { darkTheme } from '@/components/v2/theme';
+import { darkTheme } from '@/components/views/theme';
 export default function Learn() {
   return (
     <>

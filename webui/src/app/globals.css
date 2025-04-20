@@ -1,15 +1,16 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+@import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+
+@theme inline {
+
+}
+
+
 
 html, body {
-  font-family: 'Inter', sans-serif;
   background-color: #1A1A1A;
   color: white;
 }
-
 
 /* Hide scrollbars globally while maintaining functionality */
 html, body, div, section, article, aside, nav, main, header, footer {
@@ -30,5 +31,7 @@ header::-webkit-scrollbar,
 footer::-webkit-scrollbar {
   display: none !important;
 }
+
+
 
 

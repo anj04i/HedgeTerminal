@@ -1,4 +1,5 @@
-import React, { memo, useMemo } from 'react';
+"use client"
+import { memo, useMemo } from 'react';
 import { darkTheme } from './theme';
 import { CompleteMetrics } from '@/lib/types';
 

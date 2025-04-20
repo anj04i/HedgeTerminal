@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+"use client"
+import { useState, useEffect } from 'react';
 import { fundMap } from './config';
-
 import { FundHeader } from './FundHeader';
 import { Header } from './Header';
 import { darkTheme } from './theme';
@@ -66,7 +66,7 @@ export const FundDashboard: React.FC<FundDashboardProps> = ({ initialCik }) => {
 
   useEffect(() => {
     if (!selectedFund && !initialCik) {
-      setSelectedFund(fundMap['Citadel Advisors'] || Object.values(fundMap)[0]);
+      setSelectedFund(fundMap['Berkshire Hathaway'] || Object.values(fundMap)[0]);
     }
   }, [initialCik, selectedFund]);
 

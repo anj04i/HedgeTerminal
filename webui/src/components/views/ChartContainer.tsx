@@ -1,4 +1,5 @@
-import React, { memo } from 'react';
+"use client"
+import { memo } from 'react';
 import {
   ResponsiveContainer,
   LineChart,

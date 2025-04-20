@@ -1,4 +1,6 @@
-import { darkTheme } from '@/components/v2/theme';
+"use client"
+
+import { darkTheme } from '@/components/views/theme';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
