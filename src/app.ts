@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { compress } from 'hono-compress';
+import { brotliCompressSync, gzipSync } from 'zlib';
 import {
   getFundClassDistribution,
   getFundFilings,
@@ -24,13 +24,13 @@ const app = new Hono();
 
 app.use('*', cors());
 
-app.use(
-  '/api/*',
-  compress({
-    encodings: ['br', 'gzip'], // brotli if client accepts it
-    threshold: 1024, // don’t waste CPU on <1 KB
-  }),
-);
+// app.use(
+//   '/api/*',
+//   compress({
+//     encodings: ['br', 'gzip'], // brotli if client accepts it
+//     threshold: 1024, // don’t waste CPU on <1 KB
+//   }),
+// );
 
 app.get('/health', async (c) => {
   return c.text('ok');
@@ -492,39 +492,41 @@ app.post('/api/admin/refresh-metrics', async (c) => {
 
 app.get('/api/funds/:cik/all', async (c) => {
   const cik = c.req.param('cik');
-  logger.info(`Full fund payload requested for CIK: ${cik}`);
+  if (!/^\d+$/.test(cik)) return c.json({ error: 'Valid CIK required' }, 400);
 
-  if (!cik || !/^\d+$/.test(cik)) {
-    return c.json({ error: 'Valid CIK is required' }, 400);
+  const accept = c.req.header('accept-encoding') ?? '';
+  const enc = accept.includes('br')
+    ? 'br'
+    : accept.includes('gzip')
+      ? 'gzip'
+      : ('identity' as const);
+
+  const base = CACHE_KEYS.fundAll(cik);
+  const key = enc === 'identity' ? base : `${base}:${enc}`;
+
+  let body = await cache.get<Uint8Array>(key);
+
+  if (!body) {
+    const json = await getFundAllPayload(cik);
+    if (!json) return c.json({ error: 'Fund not found' }, 404);
+
+    const raw = new TextEncoder().encode(JSON.stringify(json));
+
+    body =
+      enc === 'br'
+        ? brotliCompressSync(raw)
+        : enc === 'gzip'
+          ? gzipSync(raw)
+          : raw;
+
+    await cache.set(key, body, 300_000);
   }
 
-  const cacheKey = CACHE_KEYS.fundAll
-    ? CACHE_KEYS.fundAll(cik)
-    : `fund:${cik}:all`;
-  let data = await cache.get(cacheKey);
-
-  if (!data) {
-    try {
-      data = await getFundAllPayload(cik);
-
-      if (!data) {
-        return c.json({ error: 'Fund not found' }, 404);
-      }
-
-      await cache.set(cacheKey, data);
-      logger.info(`Cached full fund payload for CIK: ${cik}`);
-    } catch (err) {
-      logger.error(`Error building full fund payload for ${cik}: ${err}`);
-      return c.json(
-        { error: 'Internal server error while fetching full fund data' },
-        500,
-      );
-    }
-  } else {
-    logger.info(`Cache hit for full fund payload: ${cik}`);
-  }
-
-  return c.json({ message: 'Full fund data retrieved', data }, 200);
+  return c.body(body, 200, {
+    'Content-Type': 'application/json',
+    ...(enc !== 'identity' && { 'Content-Encoding': enc }),
+    'Cache-Control': 'public,max-age=300,stale-while-revalidate=60',
+  });
 });
 
 export default app;

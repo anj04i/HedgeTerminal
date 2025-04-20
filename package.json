@@ -19,7 +19,8 @@
     "p-limit": "^6.2.0",
     "pg": "^8.13.3",
     "winston": "^3.17.0",
-    "xml2js": "^0.6.2"
+    "xml2js": "^0.6.2",
+    "zlib": "^1.0.5"
   },
   "scripts": {
     "server": "bun run --hot src/app.ts",
