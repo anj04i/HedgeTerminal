@@ -27,8 +27,10 @@ app.use('*', cors());
 app.use(
   '/api/*',
   compress({
-    encodings: ['br', 'gzip'], // brotli if client accepts it
-    threshold: 1024, // don’t waste CPU on <1 KB
+    encodings: ['gzip', 'br'], // Prefer gzip for speed
+    threshold: 10240, // Only compress responses >10KB
+    brotliLevel: 2, // Lower brotli compression level (faster)
+    gzipLevel: 4, // Moderate gzip compression level
   }),
 );
 
