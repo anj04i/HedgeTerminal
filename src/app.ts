@@ -13,6 +13,7 @@ import {
   getTopPerformingFunds,
   getMostUniqueFunds,
   refreshFundMetrics,
+  getFundAllPayload,
 } from './db';
 import logger from './utils/logger';
 import { funds } from './scripts/config';
@@ -495,33 +496,11 @@ app.get('/api/funds/:cik/all', async (c) => {
 
   if (!data) {
     try {
-      const [
-        filings,
-        stats,
-        volatility,
-        purchases,
-        classDistribution,
-        metrics,
-        similarFunds,
-      ] = await Promise.all([
-        getFundFilings(cik),
-        getFundStats(cik),
-        getFundVolatility(cik),
-        getFundPurchases(cik),
-        getFundClassDistribution(cik),
-        getFundCompleteMetrics(cik),
-        getSimilarFunds(cik),
-      ]);
+      data = await getFundAllPayload(cik);
 
-      data = {
-        filings,
-        stats,
-        volatility,
-        purchases,
-        classDistribution,
-        metrics,
-        similarFunds,
-      };
+      if (!data) {
+        return c.json({ error: 'Fund not found' }, 404);
+      }
 
       await cache.set(cacheKey, data);
       logger.info(`Cached full fund payload for CIK: ${cik}`);

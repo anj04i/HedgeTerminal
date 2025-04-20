@@ -494,11 +494,30 @@ export async function getMostUniqueFunds(limit: number = 10): Promise<any[]> {
 export async function refreshFundMetrics(): Promise<void> {
   try {
     await pool.query('REFRESH MATERIALIZED VIEW FUND_COMPLETE_METRICS');
+    await pool.query('REFRESH MATERIALIZED VIEW FUND_ALL_PAYLOAD');
     logger.info(
       'Successfully refreshed FUND_COMPLETE_METRICS materialized view',
     );
   } catch (err) {
     logger.error(`Error refreshing materialized view: ${err}`);
+    throw err;
+  }
+}
+
+export async function getFundAllPayload(cik: string): Promise<any> {
+  try {
+    const result = await pool.query(
+      'SELECT payload FROM FUND_ALL_PAYLOAD WHERE cik = $1',
+      [cik],
+    );
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    return result.rows[0].payload;
+  } catch (err) {
+    logger.error(`Error fetching full fund payload for ${cik}: ${err}`);
     throw err;
   }
 }

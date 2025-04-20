@@ -18,7 +18,6 @@ CREATE INDEX idx_filings_cik_date ON FILINGS(cik, filing_date);
 
 CREATE INDEX idx_filings_cik_report_date ON FILINGS(cik, report_date);
 
-
 CREATE TABLE HOLDINGS (
     cik VARCHAR(10) NOT NULL,
     name VARCHAR(100) NOT NULL,
@@ -29,6 +28,9 @@ CREATE TABLE HOLDINGS (
 );
 
 CREATE INDEX idx_holdings_cik ON HOLDINGS(cik);
+
 CREATE INDEX idx_holdings_name ON HOLDINGS(name);
+
 CREATE INDEX idx_holdings_cik_name ON HOLDINGS(cik, name);
+
 CREATE INDEX idx_holdings_value ON HOLDINGS(value);
