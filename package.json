@@ -14,6 +14,7 @@
     "@keyv/redis": "^4.3.2",
     "@types/xml2js": "^0.4.14",
     "hono": "^4.7.2",
+    "hono-compress": "^0.7.0",
     "keyv": "^5.3.2",
     "p-limit": "^6.2.0",
     "pg": "^8.13.3",
@@ -24,5 +25,8 @@
     "server": "bun run --hot src/app.ts",
     "sync-funds": "bun run src/scripts/index.ts",
     "format": "prettier --write \"**/*.{ts,js}\""
-  }
+  },
+  "trustedDependencies": [
+    "@mongodb-js/zstd"
+  ]
 }

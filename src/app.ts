@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { compress } from 'hono-compress';
 import {
   getFundClassDistribution,
   getFundFilings,
@@ -22,6 +23,14 @@ import { CACHE_KEYS, cache } from './cache';
 const app = new Hono();
 
 app.use('*', cors());
+
+app.use(
+  '/api/*',
+  compress({
+    encodings: ['br', 'gzip'], // brotli if client accepts it
+    threshold: 1024, // don’t waste CPU on <1 KB
+  }),
+);
 
 app.get('/health', async (c) => {
   return c.text('ok');
