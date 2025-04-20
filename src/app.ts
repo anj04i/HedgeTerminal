@@ -496,7 +496,35 @@ app.get('/api/funds/:cik/all', async (c) => {
 
   if (!data) {
     try {
-      data = await getFundAllPayload(cik);
+      const [
+        filings,
+        stats,
+        volatility,
+        purchases,
+        classDistribution,
+        metrics,
+        similarFunds,
+      ] = await Promise.all([
+        getFundFilings(cik),
+        getFundStats(cik),
+        getFundVolatility(cik),
+        getFundPurchases(cik),
+        getFundClassDistribution(cik),
+        getFundCompleteMetrics(cik),
+        getSimilarFunds(cik),
+      ]);
+
+      data = {
+        filings,
+        stats,
+        volatility,
+        purchases,
+        classDistribution,
+        metrics,
+        similarFunds,
+      };
+
+      // data = await getFundAllPayload(cik);
 
       if (!data) {
         return c.json({ error: 'Fund not found' }, 404);
