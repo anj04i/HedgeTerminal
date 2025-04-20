@@ -1,4 +1,4 @@
-"use client"
+'use client';
 import { memo, useMemo } from 'react';
 import { darkTheme } from './theme';
 import { Holding } from '@/lib/types';
@@ -12,7 +12,10 @@ interface HoldingsPanelProps {
 export const HoldingsPanel = memo(
   ({ holdings, isMobile = false }: HoldingsPanelProps) => {
     const topHoldings = useMemo(
-      () => [...holdings].sort((a, b) => b.value_usd - a.value_usd),
+      () =>
+        Array.isArray(holdings)
+          ? [...holdings].sort((a, b) => b.value_usd - a.value_usd)
+          : [],
       [holdings],
     );
 
@@ -115,7 +118,7 @@ export const HoldingsPanel = memo(
                       <div style={{ color: darkTheme.text }}>
                         {valueInMillions.toFixed(2)}
                       </div>
-                      <div
+                      {/* <div
                         style={{
                           fontSize: '0.625rem',
                           color: isPositive
@@ -124,7 +127,7 @@ export const HoldingsPanel = memo(
                         }}
                       >
                         {changePercent}
-                      </div>
+                      </div> */}
                     </td>
                   </tr>
                 );

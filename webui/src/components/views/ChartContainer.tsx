@@ -161,6 +161,9 @@ const VolatilityChart = memo(({ data }: { data: VolatilityData[] }) => {
 VolatilityChart.displayName = 'VolatilityChart';
 
 const SectorChart = memo(({ data }: { data: ClassDistribution[] }) => {
+  // Add null check here
+  if (!data || !Array.isArray(data)) return null;
+
   const processed = data
     .map((item) => ({
       name: item.class,

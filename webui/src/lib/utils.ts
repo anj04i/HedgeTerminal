@@ -95,11 +95,8 @@ export async function fetchMostUniqueFunds(limit: number = 10): Promise<any> {
   return fetchApi<any>(`/api/funds/most-unique?limit=${limit}`);
 }
 
-export async function fetchAllFundData(
-  cik: string,
-): Promise<FullFundResponse['data']> {
-  const res = await fetchApi<FullFundResponse>(`/api/funds/${cik}/all`);
-  return res.data;
+export async function fetchAllFundData(cik: string): Promise<FullFundResponse> {
+  return fetchApi<FullFundResponse>(`/api/funds/${cik}/all`);
 }
 
 // Format currency for display

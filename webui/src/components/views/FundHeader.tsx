@@ -1,4 +1,4 @@
-"use client"
+'use client';
 import { memo } from 'react';
 import { darkTheme } from './theme';
 import { CompleteMetrics } from '@/lib/types';
@@ -8,9 +8,13 @@ interface FundHeaderProps {
   isMobile?: boolean;
 }
 
-const getValueColor = (value: string) => {
-  if (!value) return { color: darkTheme.secondaryText };
-  return value.startsWith('-')
+const getValueColor = (value: string | number) => {
+  if (!value && value !== 0) return { color: darkTheme.secondaryText };
+
+  // Convert to string to ensure startsWith works
+  const stringValue = String(value);
+
+  return stringValue.startsWith('-')
     ? { color: darkTheme.negative }
     : { color: darkTheme.accent };
 };
