@@ -1,4 +1,4 @@
-"use client"
+'use client';
 import { memo } from 'react';
 import {
   ResponsiveContainer,
@@ -229,7 +229,6 @@ SectorChart.displayName = 'SectorChart';
 
 export const ChartContainer = memo(
   ({
-    metrics,
     filings,
     quarterlyChanges,
     classDistribution,

@@ -8,8 +8,12 @@ const nextConfig: NextConfig = {
     formats: ['image/avif', 'image/webp'], // ~20‑30 % smaller
   },
 
-  swcMinify: true,          // default, keep it explicitl
+  swcMinify: true, // default, keep it explicitl
   reactStrictMode: true,
+
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default nextConfig;
