@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # secf
 
 SECF is a 13F tracker that monitors institutional fund movements and provides a dashboard for visualization.
@@ -86,6 +86,4 @@ http://localhost:8501
 cd webui
 bun run dev
 ```
-=======
-# HedgeTerminal
->>>>>>> 0d6d96c8cb478d7fdadbeb5230870c7a37461232
+ 
